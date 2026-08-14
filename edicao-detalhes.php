@@ -177,7 +177,7 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
     <div class="modulos-grid">
         
         <!-- 1. Equipe de Trabalho -->
-        <a href="equipe.php?edicao_id=<?= $edicao_id ?>" class="card-modulo">
+        <a href="equipe-hub.php?edicao_id=<?= $edicao_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-people-fill"></i>
             </div>
@@ -198,8 +198,8 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
             </div>
         </a>
 
-        <!-- 3. Apostila de Música -->
-        <a href="musicas.php?edicao_id=<?= $edicao_id ?>" class="card-modulo">
+       <!-- 3. Apostila de Música (CORRIGIDO) -->
+        <a href="apostila-musica.php?edicao_id=<?= $edicao_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-music-note-list"></i>
             </div>

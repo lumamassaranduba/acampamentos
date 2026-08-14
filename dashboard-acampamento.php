@@ -713,7 +713,7 @@ $total_edicoes = count($edicoes);
 
                     <div class="mb-3">
                         <label class="form-label small fw-medium text-secondary">Lema</label>
-                        <input type="text" name="lema" class="form-control" placeholder="Ex: Tudo Posso Naquele que me Fortalece" value="<?= htmlspecialchars($lema) ?>">
+                        <input type="text" name="lema" class="form-control" placeholder="Ex: frase do acampamento" value="<?= htmlspecialchars($lema) ?>">
                     </div>
 
                     <div class="mb-3">
