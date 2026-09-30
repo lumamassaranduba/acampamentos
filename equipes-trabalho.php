@@ -91,6 +91,10 @@ $voluntarios_geral = $stmt_geral->get_result()->fetch_all(MYSQLI_ASSOC);
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <!-- Tom Select (Pesquisa no dropdown) -->
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+
     <style>
         :root { --efata-dark: #0F172A; --efata-gold: #C5A059; --efata-bg: #F8FAFC; }
         body { font-family: 'Outfit', sans-serif; background-color: var(--efata-bg); }
@@ -105,6 +109,12 @@ $voluntarios_geral = $stmt_geral->get_result()->fetch_all(MYSQLI_ASSOC);
             color: var(--efata-dark);
             background-color: #FFFBEB;
             border-left: 4px solid var(--efata-gold);
+        }
+
+        /* Ajuste do Tom Select no Modal */
+        .ts-control {
+            border-radius: 0.375rem;
+            padding: 0.5rem 0.75rem;
         }
     </style>
 </head>
@@ -246,8 +256,8 @@ $voluntarios_geral = $stmt_geral->get_result()->fetch_all(MYSQLI_ASSOC);
                     <div class="modal-body p-4">
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Selecione o Voluntário da Equipe Geral *</label>
-                            <select name="voluntario_id" class="form-select" required>
-                                <option value="">Selecione...</option>
+                            <select name="voluntario_id" id="select-voluntario" placeholder="Digite para pesquisar o nome..." required>
+                                <option value="">Digite para pesquisar...</option>
                                 <?php foreach ($voluntarios_geral as $vg): ?>
                                     <option value="<?= $vg['id'] ?>"><?= htmlspecialchars($vg['nome']) ?> (<?= htmlspecialchars($vg['telefone']) ?>)</option>
                                 <?php endforeach; ?>
@@ -269,11 +279,35 @@ $voluntarios_geral = $stmt_geral->get_result()->fetch_all(MYSQLI_ASSOC);
         </div>
     </div>
 
+    <!-- JS Bootstrap -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- JS Tom Select -->
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
     <script>
+        let tomSelectInstance = null;
+
+        document.addEventListener("DOMContentLoaded", function () {
+            // Inicializar o campo com busca rápida
+            tomSelectInstance = new TomSelect("#select-voluntario", {
+                create: false,
+                sortField: {
+                    field: "text",
+                    direction: "asc"
+                }
+            });
+        });
+
         function abrirModalAlocar(id, nome) {
             document.getElementById('alocar_equipe_id').value = id;
             document.getElementById('alocar_nome_equipe').innerText = nome;
+            
+            // Limpa a seleção anterior do Tom Select quando abre o modal
+            if (tomSelectInstance) {
+                tomSelectInstance.clear();
+            }
+
             new bootstrap.Modal(document.getElementById('modalAlocar')).show();
         }
     </script>

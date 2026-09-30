@@ -28,6 +28,33 @@ if (!in_array($perfil, $perfis_gerais, true)) {
     }
 }
 
+// --- 1. CRIAR NOVA EDIÇÃO ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao_criar_edicao'])) {
+    $nome_edicao = trim($_POST['nome_edicao'] ?? '');
+    $ano_edicao  = intval($_POST['ano_edicao'] ?? date('Y'));
+
+    if (!empty($nome_edicao) && $modalidade_id > 0) {
+        try {
+            $stmt_add = $conn->prepare("INSERT INTO edicoes (modalidade_id, nome, ano, status) VALUES (?, ?, ?, 'ativa')");
+            $stmt_add->bind_param("isi", $modalidade_id, $nome_edicao, $ano_edicao);
+            
+            if ($stmt_add->execute()) {
+                $mensagem_sucesso = "Nova edição criada com sucesso!";
+            } else {
+                $mensagem_erro = "Erro ao cadastrar edição.";
+            }
+        } catch (mysqli_sql_exception $e) {
+            if ($e->getCode() === 1062) {
+                $mensagem_erro = "Já existe uma edição cadastrada para o ano {$ano_edicao} nesta modalidade!";
+            } else {
+                $mensagem_erro = "Erro ao cadastrar edição: " . $e->getMessage();
+            }
+        }
+    } else {
+        $mensagem_erro = "Preencha todos os campos obrigatórios.";
+    }
+}
+
 // --- 2. EDITAR EDIÇÃO EXISTENTE ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao_editar_edicao'])) {
     $edicao_id_edit = intval($_POST['edicao_id'] ?? 0);
@@ -559,7 +586,7 @@ $total_edicoes = count($edicoes);
                     
                     <h5 class="fw-bold text-dark mt-2 mb-1"><?= $tituloCard ?></h5>
                     <p class="text-muted small mb-4">
-                        <?= $isAtiva ? 'Gestão ativa do evento e inscrições.' : 'Edição finalizada (Apenas leitura/histórico).' ?>
+                        <?= $isAtiva ? 'Gerenciar gestão.' : 'Edição finalizada (Apenas leitura/histórico).' ?>
                     </p>
                 </div>
 

@@ -237,7 +237,7 @@ function renderCategoria($subcategorias) {
 
             <!-- Botão Adicionar / Gerenciar Músicas (Sempre Visível) -->
             <a href="gerenciar-musicas.php?edicao_id=<?= $edicao_id ?>" class="btn btn-sm btn-gold rounded-3 px-3 py-2 d-flex align-items-center gap-1 text-nowrap">
-                <i class="bi bi-plus-circle-fill"></i> <span>Adicionar música</span>
+                <i class="bi bi-plus-circle-fill"></i> <span>Gerenciar músicas</span>
             </a>
         </div>
     </header>

@@ -15,36 +15,39 @@ $mensagem_erro = '';
 // PROCESSA O CADASTRO DE NOVO USUÁRIO
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao_cadastrar'])) {
     $nome   = trim($_POST['nome'] ?? '');
+    $email  = trim($_POST['email'] ?? '');
     $senha  = trim($_POST['senha'] ?? '');
     $perfil = trim($_POST['perfil'] ?? 'COORDENADOR');
     $mods   = $_POST['modalidades'] ?? []; // Array de IDs selecionados
 
-    if (!empty($nome) && !empty($senha)) {
-        $nome_limpo   = preg_replace('/[^a-zA-Z0-9]/', '', mb_strtolower($nome));
-        $email_gerado = $nome_limpo . '@acampamento.local';
-        $senha_hash   = password_hash($senha, PASSWORD_DEFAULT);
-
-        $stmt = $conn->prepare("INSERT INTO usuarios (nome, email, senha, perfil) VALUES (?, ?, ?, ?)");
-        $stmt->bind_param("ssss", $nome, $email_gerado, $senha_hash, $perfil);
-
-        if ($stmt->execute()) {
-            $usr_id = $conn->insert_id;
-
-            // Insere as relações de acampamentos
-            if (!empty($mods) && is_array($mods)) {
-                $stmt_m = $conn->prepare("INSERT INTO usuario_modalidade (usuario_id, modalidade_id) VALUES (?, ?)");
-                foreach ($mods as $m_id) {
-                    $m_id_int = intval($m_id);
-                    $stmt_m->bind_param("ii", $usr_id, $m_id_int);
-                    $stmt_m->execute();
-                }
-            }
-            $mensagem_sucesso = "Usuário cadastrado com sucesso!";
+    if (!empty($nome) && !empty($email) && !empty($senha)) {
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $mensagem_erro = "Por favor, insira um e-mail válido.";
         } else {
-            $mensagem_erro = "Erro ao cadastrar: " . $conn->error;
+            $senha_hash = password_hash($senha, PASSWORD_DEFAULT);
+
+            $stmt = $conn->prepare("INSERT INTO usuarios (nome, email, senha, perfil) VALUES (?, ?, ?, ?)");
+            $stmt->bind_param("ssss", $nome, $email, $senha_hash, $perfil);
+
+            if ($stmt->execute()) {
+                $usr_id = $conn->insert_id;
+
+                // Insere as relações de acampamentos
+                if (!empty($mods) && is_array($mods)) {
+                    $stmt_m = $conn->prepare("INSERT INTO usuario_modalidade (usuario_id, modalidade_id) VALUES (?, ?)");
+                    foreach ($mods as $m_id) {
+                        $m_id_int = intval($m_id);
+                        $stmt_m->bind_param("ii", $usr_id, $m_id_int);
+                        $stmt_m->execute();
+                    }
+                }
+                $mensagem_sucesso = "Usuário cadastrado com sucesso!";
+            } else {
+                $mensagem_erro = "Erro ao cadastrar: " . $conn->error;
+            }
         }
     } else {
-        $mensagem_erro = "Preencha o nome e a senha.";
+        $mensagem_erro = "Preencha o nome, e-mail e a senha.";
     }
 }
 
@@ -52,40 +55,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao_cadastrar'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao_editar'])) {
     $id         = intval($_POST['id'] ?? 0);
     $nome       = trim($_POST['nome'] ?? '');
+    $email      = trim($_POST['email'] ?? '');
     $perfil     = trim($_POST['perfil'] ?? 'COORDENADOR');
     $ativo      = isset($_POST['ativo']) ? intval($_POST['ativo']) : 1;
     $nova_senha = trim($_POST['senha'] ?? '');
     $mods       = $_POST['modalidades'] ?? [];
 
-    if ($id > 0 && !empty($nome)) {
-        if (!empty($nova_senha)) {
-            $senha_hash = password_hash($nova_senha, PASSWORD_DEFAULT);
-            $stmt = $conn->prepare("UPDATE usuarios SET nome = ?, perfil = ?, ativo = ?, senha = ? WHERE id = ?");
-            $stmt->bind_param("ssisi", $nome, $perfil, $ativo, $senha_hash, $id);
+    if ($id > 0 && !empty($nome) && !empty($email)) {
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $mensagem_erro = "Por favor, insira um e-mail válido.";
         } else {
-            $stmt = $conn->prepare("UPDATE usuarios SET nome = ?, perfil = ?, ativo = ? WHERE id = ?");
-            $stmt->bind_param("ssii", $nome, $perfil, $ativo, $id);
-        }
-
-        if ($stmt->execute()) {
-            // Limpa as modalidades antigas
-            $stmt_del = $conn->prepare("DELETE FROM usuario_modalidade WHERE usuario_id = ?");
-            $stmt_del->bind_param("i", $id);
-            $stmt_del->execute();
-
-            // Insere as novas seleções
-            if (!empty($mods) && is_array($mods)) {
-                $stmt_m = $conn->prepare("INSERT INTO usuario_modalidade (usuario_id, modalidade_id) VALUES (?, ?)");
-                foreach ($mods as $m_id) {
-                    $m_id_int = intval($m_id);
-                    $stmt_m->bind_param("ii", $id, $m_id_int);
-                    $stmt_m->execute();
-                }
+            if (!empty($nova_senha)) {
+                $senha_hash = password_hash($nova_senha, PASSWORD_DEFAULT);
+                $stmt = $conn->prepare("UPDATE usuarios SET nome = ?, email = ?, perfil = ?, ativo = ?, senha = ? WHERE id = ?");
+                $stmt->bind_param("sssisi", $nome, $email, $perfil, $ativo, $senha_hash, $id);
+            } else {
+                $stmt = $conn->prepare("UPDATE usuarios SET nome = ?, email = ?, perfil = ?, ativo = ? WHERE id = ?");
+                $stmt->bind_param("sssii", $nome, $email, $perfil, $ativo, $id);
             }
-            $mensagem_sucesso = "Usuário atualizado com sucesso!";
-        } else {
-            $mensagem_erro = "Erro ao atualizar: " . $conn->error;
+
+            if ($stmt->execute()) {
+                // Limpa as modalidades antigas
+                $stmt_del = $conn->prepare("DELETE FROM usuario_modalidade WHERE usuario_id = ?");
+                $stmt_del->bind_param("i", $id);
+                $stmt_del->execute();
+
+                // Insere as novas seleções
+                if (!empty($mods) && is_array($mods)) {
+                    $stmt_m = $conn->prepare("INSERT INTO usuario_modalidade (usuario_id, modalidade_id) VALUES (?, ?)");
+                    foreach ($mods as $m_id) {
+                        $m_id_int = intval($m_id);
+                        $stmt_m->bind_param("ii", $id, $m_id_int);
+                        $stmt_m->execute();
+                    }
+                }
+                $mensagem_sucesso = "Usuário atualizado com sucesso!";
+            } else {
+                $mensagem_erro = "Erro ao atualizar: " . $conn->error;
+            }
         }
+    } else {
+        $mensagem_erro = "Preencha o nome e o e-mail.";
     }
 }
 
@@ -207,6 +217,7 @@ $usuarios = $conn->query($query_usuarios);
                                                     class="btn btn-sm btn-outline-dark rounded-start-2 btn-editar" 
                                                     data-id="<?= $u['id'] ?>"
                                                     data-nome="<?= htmlspecialchars($u['nome']) ?>"
+                                                    data-email="<?= htmlspecialchars($u['email']) ?>"
                                                     data-perfil="<?= htmlspecialchars($u['perfil']) ?>"
                                                     data-modalidades="<?= $u['modalidades_ids'] ?? '' ?>"
                                                     data-ativo="<?= $u['ativo'] ?? 1 ?>"
@@ -250,6 +261,10 @@ $usuarios = $conn->query($query_usuarios);
                         <div class="mb-3">
                             <label class="form-label small fw-medium text-muted">Nome do Usuário</label>
                             <input type="text" name="nome" class="form-control rounded-3" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-medium text-muted">E-mail</label>
+                            <input type="email" name="email" class="form-control rounded-3" placeholder="usuario@email.com" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-medium text-muted">Senha</label>
@@ -302,6 +317,10 @@ $usuarios = $conn->query($query_usuarios);
                         <div class="mb-3">
                             <label class="form-label small fw-medium text-muted">Nome do Usuário</label>
                             <input type="text" name="nome" id="edit_nome" class="form-control rounded-3" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-medium text-muted">E-mail</label>
+                            <input type="email" name="email" id="edit_email" class="form-control rounded-3" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-medium text-muted">Nova Senha <span class="fw-normal text-muted">(Deixe em branco para manter a atual)</span></label>
@@ -377,6 +396,7 @@ $usuarios = $conn->query($query_usuarios);
             button.addEventListener('click', function() {
                 document.getElementById('edit_id').value = this.dataset.id;
                 document.getElementById('edit_nome').value = this.dataset.nome;
+                document.getElementById('edit_email').value = this.dataset.email;
                 document.getElementById('edit_perfil').value = this.dataset.perfil;
                 document.getElementById('edit_ativo').value = this.dataset.ativo;
 

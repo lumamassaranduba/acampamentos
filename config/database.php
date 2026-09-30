@@ -3,7 +3,7 @@
 $host = "localhost";
 $user = "root";
 $pass = "";
-$db   = "gestao_acampamentos";
+$db   = "gestao_acampamentos"; 
 
 $conn = new mysqli($host, $user, $pass, $db);
 

@@ -93,7 +93,8 @@ $equipes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             <?php else: ?>
                 <?php foreach ($equipes as $eq): ?>
                     <div class="col-12 col-md-6 col-lg-4">
-                        <div class="card-equipe-atribuicao p-4 h-100 d-flex flex-column justify-content-between" onclick="abrirModalFuncoes(<?= $eq['id'] ?>, '<?= htmlspecialchars(addslashes($eq['nome'])) ?>', '<?= htmlspecialchars(addslashes($eq['atribuicoes'] ?? '')) ?>')">
+                        <div class="card-equipe-atribuicao p-4 h-100 d-flex flex-column justify-content-between" 
+                             onclick='abrirModalFuncoes(<?= $eq["id"] ?>, <?= json_encode($eq["nome"]) ?>, <?= json_encode($eq["atribuicoes"] ?? "") ?>)'>
                             <div>
                                 <div class="d-flex align-items-center gap-3 mb-3">
                                     <div class="rounded-circle bg-warning bg-opacity-10 p-3 text-warning d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
@@ -107,15 +108,10 @@ $equipes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
                                 <div class="bg-light p-3 rounded-3 border">
                                     <small class="fw-bold text-uppercase text-muted d-block mb-1" style="font-size: 0.75rem;">Resumo das Atribuições:</small>
-                                    <p class="small text-secondary mb-0 text-truncate-3" style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line;">
+                                    <p class="small text-secondary mb-0" style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line;">
                                         <?= !empty($eq['atribuicoes']) ? htmlspecialchars($eq['atribuicoes']) : 'Nenhuma função/atribuição cadastrada ainda.' ?>
                                     </p>
                                 </div>
-                            </div>
-
-                            <div class="pt-3 mt-3 border-top d-flex justify-content-between align-items-center">
-                                <span class="badge bg-secondary">Cadastrar/Editar</span>
-                                <i class="bi bi-arrow-right-circle-fill text-warning fs-5"></i>
                             </div>
                         </div>
                     </div>
@@ -154,12 +150,18 @@ $equipes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        let modalElement = document.getElementById('modalFuncoes');
+        let modalFuncoesBs = null;
+
         function abrirModalFuncoes(id, nome, textoAtribuicoes) {
             document.getElementById('modal_equipe_id').value = id;
             document.getElementById('modal_nome_equipe').innerText = nome;
             document.getElementById('modal_texto_atribuicoes').value = textoAtribuicoes;
             
-            new bootstrap.Modal(document.getElementById('modalFuncoes')).show();
+            if (!modalFuncoesBs) {
+                modalFuncoesBs = new bootstrap.Modal(modalElement);
+            }
+            modalFuncoesBs.show();
         }
     </script>
 </body>

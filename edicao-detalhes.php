@@ -16,6 +16,9 @@ if (!isset($_SESSION['usuario_id'])) {
     exit;
 }
 
+// Caminho para a imagem da sua Logo (Altere aqui se o caminho for outro)
+$caminho_logo = 'assets/img/logo.png'; 
+
 // 2. Captura o ID da edição (aceita edicao_id ou id na URL)
 $edicao_id = 0;
 if (isset($_GET['edicao_id']) && intval($_GET['edicao_id']) > 0) {
@@ -51,8 +54,9 @@ if (!$edicao) {
 }
 
 // 4. Valida permissões do usuário
-$perfil     = $_SESSION['usuario_perfil'] ?? '';
-$permitidos = $_SESSION['modalidades_permitidas'] ?? [];
+$perfil          = $_SESSION['usuario_perfil'] ?? '';
+$permitidos      = $_SESSION['modalidades_permitidas'] ?? [];
+$nome_usuario    = $_SESSION['usuario_nome'] ?? 'Valéria Guimarães';
 
 if ($perfil !== 'COORDENADORA_GERAL' && !in_array($edicao['modalidade_id'], $permitidos)) {
     header("Location: dashboard-geral.php?erro=sem_permissao");
@@ -60,6 +64,7 @@ if ($perfil !== 'COORDENADORA_GERAL' && !in_array($edicao['modalidade_id'], $per
 }
 
 // Variáveis de exibição
+$modalidade_id  = intval($edicao['modalidade_id']);
 $nomeModalidade = htmlspecialchars($edicao['modalidade_nome']);
 $nomeEdicao     = !empty($edicao['nome']) ? htmlspecialchars($edicao['nome']) : "Edição";
 $anoEdicao      = intval($edicao['ano'] ?? date('Y'));
@@ -77,8 +82,91 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
-        body { font-family: 'Outfit', sans-serif; background-color: #fcfbf9; color: #1c1917; margin: 0; padding: 0; }
-        
+        :root {
+            --cor-modalidade: <?= $cor ?>;
+            --nav-bg: #0d1b2a;
+            --nav-yellow: #e5b338;
+            --nav-red: #e63946;
+        }
+
+        body { 
+            font-family: 'Outfit', sans-serif; 
+            background-color: #fcfbf9; 
+            color: #1c1917; 
+            margin: 0; 
+            padding: 0; 
+        }
+
+        /* Estilização da Navbar */
+        .navbar-custom {
+            background-color: var(--nav-bg);
+            padding: 0.85rem 2rem;
+            color: #ffffff;
+        }
+
+        .user-profile-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Container da Logo */
+        .logo-box {
+            width: 48px;
+            height: 48px;
+            border: 1.5px solid var(--nav-yellow);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background-color: rgba(255, 255, 255, 0.05);
+            flex-shrink: 0;
+        }
+
+        .logo-box img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            padding: 4px;
+        }
+
+        .user-info-text .user-name {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: #ffffff;
+            line-height: 1.2;
+        }
+
+        .user-info-text .user-role {
+            font-size: 0.78rem;
+            color: #94a3b8;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        /* Botão de Sair */
+        .btn-nav-outline-red {
+            background-color: transparent;
+            color: #f87171;
+            border: 1px solid var(--nav-red);
+            font-weight: 600;
+            border-radius: 10px;
+            padding: 0.45rem 1.1rem;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-nav-outline-red:hover {
+            background-color: rgba(230, 57, 70, 0.1);
+            color: #f87171;
+        }
+
+        /* Conteúdo Principal */
         .main-content { 
             padding: 32px 48px; 
             width: 100%; 
@@ -109,10 +197,10 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
         }
 
         .card-modulo:hover {
-            border-color: <?= $cor ?>;
+            border-color: var(--cor-modalidade);
             box-shadow: 0 6px 16px rgba(0,0,0,0.06);
             transform: translateY(-3px);
-            color: <?= $cor ?>;
+            color: var(--cor-modalidade);
         }
 
         .card-modulo-icon {
@@ -130,13 +218,16 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
         }
 
         .card-modulo:hover .card-modulo-icon {
-            background-color: <?= $cor ?>;
+            background-color: var(--cor-modalidade);
             color: #ffffff;
         }
 
         @media (max-width: 768px) {
             .main-content {
                 padding: 16px;
+            }
+            .navbar-custom {
+                padding: 0.85rem 1rem;
             }
             .modulos-grid {
                 grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -147,12 +238,37 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
 </head>
 <body>
 
+<!-- NAVBAR (SEM OS BOTÕES DE INSERIR E ACESSOS) -->
+<nav class="navbar navbar-expand-lg navbar-custom sticky-top">
+    <div class="container-fluid p-0">
+        
+        <!-- LADO ESQUERDO: LOGO DO PROJETO + PERFIL DO USUÁRIO -->
+        <div class="user-profile-container">
+            <div class="logo-box">
+                <img src="./uploads/logos/logoefata.png" alt="Logo do Projeto" onerror="this.onerror=null; this.src='https://via.placeholder.com/48?text=LOGO';">
+            </div>
+            <div class="user-info-text">
+                <div class="user-name"><?= htmlspecialchars($nome_usuario) ?></div>
+                <div class="user-role"><?= htmlspecialchars($perfil) ?></div>
+            </div>
+        </div>
+
+        <!-- LADO DIREITO: SOMENTE BOTÃO SAIR -->
+        <div class="d-flex align-items-center gap-2 ms-auto">
+            <a href="logout.php" class="btn-nav-outline-red">
+                <i class="bi bi-box-arrow-right"></i> Sair
+            </a>
+        </div>
+
+    </div>
+</nav>
+
 <main class="main-content">
 
     <!-- CABEÇALHO DA EDIÇÃO -->
     <div class="bg-white p-4 rounded-4 border mb-4 shadow-sm d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3" style="border-color: #e7e5e4 !important;">
         <div class="d-flex align-items-center gap-3">
-            <a href="dashboard-acampamento.php?modalidade_id=<?= $edicao['modalidade_id'] ?>" class="btn btn-light btn-sm rounded-3 d-flex align-items-center gap-2 border text-secondary">
+            <a href="dashboard-acampamento.php?modalidade_id=<?= $modalidade_id ?>" class="btn btn-light btn-sm rounded-3 d-flex align-items-center gap-2 border text-secondary">
                 <i class="bi bi-arrow-left"></i> Voltar
             </a>
 
@@ -177,7 +293,7 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
     <div class="modulos-grid">
         
         <!-- 1. Equipe de Trabalho -->
-        <a href="equipe-hub.php?edicao_id=<?= $edicao_id ?>" class="card-modulo">
+        <a href="equipe-hub.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-people-fill"></i>
             </div>
@@ -187,8 +303,19 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
             </div>
         </a>
 
-        <!-- 2. Cronograma -->
-        <a href="cronograma.php?edicao_id=<?= $edicao_id ?>" class="card-modulo">
+        <!-- 2. Equipes-Campistas -->
+        <a href="equipes-campistas.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
+            <div class="card-modulo-icon">
+                <i class="bi bi-person-badge-fill"></i>
+            </div>
+            <div>
+                <h6 class="fw-bold m-0">Equipes-Campistas</h6>
+                <span class="text-muted small">Campistas e tribos/equipes</span>
+            </div>
+        </a>
+
+        <!-- 3. Cronograma -->
+        <a href="cronograma.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-calendar-week"></i>
             </div>
@@ -198,8 +325,19 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
             </div>
         </a>
 
-       <!-- 3. Apostila de Música (CORRIGIDO) -->
-        <a href="apostila-musica.php?edicao_id=<?= $edicao_id ?>" class="card-modulo">
+        <!-- 4. Espiritualidade -->
+        <a href="espiritualidade.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
+            <div class="card-modulo-icon">
+                <i class="bi bi-heart-pulse-fill"></i>
+            </div>
+            <div>
+                <h6 class="fw-bold m-0">Espiritualidade</h6>
+                <span class="text-muted small">Oração, capela e momentos</span>
+            </div>
+        </a>
+
+        <!-- 5. Apostila de Música -->
+        <a href="apostila-musica.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-music-note-list"></i>
             </div>
@@ -209,8 +347,8 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
             </div>
         </a>
 
-        <!-- 4. Pregações -->
-        <a href="pregacoes.php?edicao_id=<?= $edicao_id ?>" class="card-modulo">
+        <!-- 6. Pregações -->
+        <a href="pregacoes-dinamicas.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-book-half"></i>
             </div>
@@ -220,8 +358,8 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
             </div>
         </a>
 
-        <!-- 5. Lista de Compras -->
-        <a href="compras.php?edicao_id=<?= $edicao_id ?>" class="card-modulo">
+        <!-- 7. Lista de Compras -->
+        <a href="compras.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-cart-check"></i>
             </div>
@@ -231,8 +369,8 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
             </div>
         </a>
 
-        <!-- 6. Missa -->
-        <a href="missa.php?edicao_id=<?= $edicao_id ?>" class="card-modulo">
+        <!-- 8. Missa -->
+        <a href="missa.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-bell-fill"></i>
             </div>
@@ -242,8 +380,8 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
             </div>
         </a>
 
-        <!-- 7. Recreação -->
-        <a href="recreacao.php?edicao_id=<?= $edicao_id ?>" class="card-modulo">
+        <!-- 9. Recreação -->
+        <a href="recreacao.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-controller"></i>
             </div>
@@ -253,8 +391,8 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
             </div>
         </a>
 
-        <!-- 8. Apostila da Manutenção -->
-        <a href="manutencao.php?edicao_id=<?= $edicao_id ?>" class="card-modulo">
+        <!-- 10. Apostila da Manutenção -->
+        <a href="manutencao.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-tools"></i>
             </div>
@@ -264,8 +402,8 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
             </div>
         </a>
 
-        <!-- 9. Pasta dos Desafios -->
-        <a href="desafios.php?edicao_id=<?= $edicao_id ?>" class="card-modulo">
+        <!-- 11. Pasta dos Desafios -->
+        <a href="desafios.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-trophy-fill"></i>
             </div>

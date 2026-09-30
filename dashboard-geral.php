@@ -57,7 +57,6 @@ if (isset($stmt)) {
             --navy-light: #1E293B;
             --gold-primary: #D4AF37;
             --gold-hover: #B59228;
-            --gold-light: #FFFBF0;
             --bg-main: #F8FAFC;
             --border-color: #E2E8F0;
             --text-primary: #0F172A;
@@ -71,7 +70,7 @@ if (isset($stmt)) {
             min-height: 100vh;
         }
 
-        /* Navbar Azul Marinho com Escrita Branca */
+        /* Navbar */
         .top-navbar {
             background-color: var(--navy-dark);
             border-bottom: 2px solid var(--gold-primary);
@@ -96,12 +95,12 @@ if (isset($stmt)) {
         }
 
         .main-container {
-            padding: 3rem 2rem;
+            padding: 2.5rem 2rem;
             max-width: 1400px;
             margin: 0 auto;
         }
 
-        /* Botões Dourados na Navbar */
+        /* Botões Navbar */
         .btn-gold {
             background-color: var(--gold-primary);
             color: var(--navy-dark);
@@ -141,64 +140,84 @@ if (isset($stmt)) {
             color: #ffffff;
         }
 
-        /* Design Elegante e Limpo dos Cards */
-        .card-acampamento { 
+        /* Design do Card Limpo */
+        .card-modern {
             background: #ffffff;
-            border: 1px solid var(--border-color);
-            border-radius: 24px; 
+            border: 1px solid #E2E8F0;
+            border-radius: 20px;
+            padding: 12px;
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
         }
-        
-        .card-acampamento:hover { 
-            transform: translateY(-6px); 
-            box-shadow: 0 16px 30px -8px rgba(10, 25, 47, 0.12); 
+
+        .card-modern:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px -6px rgba(10, 25, 47, 0.12);
             border-color: #CBD5E1;
         }
 
-        .card-body-custom {
-            padding: 2.5rem 1.75rem 2rem 1.75rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            height: 100%;
-        }
-
-        .card-logo-box {
-            width: 110px;
-            height: 110px;
-            border-radius: 50%;
+        /* Área da Imagem */
+        .card-banner-box {
+            width: 100%;
+            height: 180px;
+            border-radius: 14px;
+            background-color: #F1F5F9;
+            overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
-            background-color: #ffffff;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
-            margin-bottom: 1.5rem;
+        }
+
+        .card-banner-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            padding: 12px;
             transition: transform 0.3s ease;
         }
 
-        .card-acampamento:hover .card-logo-box {
-            transform: scale(1.05);
+        .card-modern:hover .card-banner-box img {
+            transform: scale(1.04);
         }
 
-        .card-logo-box img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+        /* Conteúdo e Informações */
+        .card-info {
+            padding: 14px 4px 4px 4px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            justify-content: space-between;
         }
 
+        .card-title-text {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+
+        .card-subtitle-text {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            min-height: 38px;
+        }
+
+        /* Botão Acessar Painel */
         .btn-card-action {
             background-color: var(--navy-dark);
             color: #ffffff;
             font-weight: 600;
-            border-radius: 14px;
+            border-radius: 12px;
             border: none;
-            padding: 0.75rem 1rem;
+            padding: 0.6rem 1rem;
             transition: all 0.2s ease;
+            font-size: 0.9rem;
+            text-decoration: none;
         }
 
         .btn-card-action:hover {
@@ -219,12 +238,15 @@ if (isset($stmt)) {
             .main-container {
                 padding: 1.5rem 1rem;
             }
+            .card-banner-box {
+                height: 160px;
+            }
         }
     </style>
 </head>
 <body>
 
-<!-- NAVBAR EN AZUL MARINHO, TEXTO BRANCO E BOTÕES DOURADOS -->
+<!-- NAVBAR -->
 <nav class="top-navbar d-flex align-items-center justify-content-between">
     <div class="d-flex align-items-center gap-3">
         <div class="brand-icon shadow-sm">
@@ -232,7 +254,7 @@ if (isset($stmt)) {
         </div>
         <div>
             <h6 class="fw-bold m-0 text-white"><?= htmlspecialchars($_SESSION['usuario_nome'] ?? 'Usuário') ?></h6>
-            <small class="text-light opacity-75 d-block" style="font-size: 0.78rem;"><?= htmlspecialchars($perfil) ?> • Gestão Paroquial</small>
+            <small class="text-light opacity-75 d-block" style="font-size: 0.78rem;"><?= htmlspecialchars($perfil) ?></small>
         </div>
     </div>
 
@@ -249,7 +271,6 @@ if (isset($stmt)) {
             </a>
         <?php endif; ?>
 
-        <!-- Botão aciona o Modal de Logout -->
         <button class="btn btn-outline-danger-custom btn-sm rounded-3 px-3 py-2 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalConfirmarLogout">
             <i class="bi bi-box-arrow-right"></i>
             <span class="d-none d-md-inline">Sair</span>
@@ -258,10 +279,9 @@ if (isset($stmt)) {
 </nav>
 
 <div class="main-container">
-    <!-- TÍTULO CENTRALIZADO -->
-    <div class="text-center mb-5">
-        <h2 class="fw-bold text-dark m-0 mb-2" style="font-size: 2.1rem;">Selecione o Acampamento</h2>
-        <p class="text-muted m-0" style="font-size: 1rem;">Escolha um abaixo para gerenciar equipes, cronograma e espiritualidade.</p>
+    <div class="text-center mb-4">
+        <h2 class="fw-bold text-dark m-0 mb-1" style="font-size: 1.8rem;">Selecione o Acampamento</h2>
+        <p class="text-muted m-0" style="font-size: 0.9rem;">Escolha um abaixo para gerenciar equipes, cronograma e espiritualidade.</p>
     </div>
 
     <!-- GRID DE CARDS -->
@@ -271,7 +291,6 @@ if (isset($stmt)) {
                 $corMod = !empty($mod['cor']) ? $mod['cor'] : '#D4AF37';
                 $nomeMod = htmlspecialchars($mod['nome']);
 
-                // Resolução do Logo para exibição no card
                 $nomeLimpo = mb_strtolower(trim($mod['nome']), 'UTF-8');
                 $nomeLimpo = preg_replace('/[áàãâä]/u', 'a', $nomeLimpo);
                 $nomeLimpo = preg_replace('/[éèêë]/u', 'e', $nomeLimpo);
@@ -293,22 +312,23 @@ if (isset($stmt)) {
                     }
                 }
             ?>
-                <div class="col-12 col-md-6 col-lg-4">
-                    <div class="card card-acampamento h-100">
-                        <div class="card-body-custom">
-                            <div class="card-logo-box">
-                                <?php if ($caminhoLogo): ?>
-                                    <img src="<?= $caminhoLogo ?>?v=<?= time() ?>" alt="<?= $nomeMod ?>">
-                                <?php else: ?>
-                                    <i class="bi bi-shield-fill fs-1" style="color: var(--navy-dark);"></i>
-                                <?php endif; ?>
-                            </div>
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                    <div class="card-modern">
+                        <div class="card-banner-box">
+                            <?php if ($caminhoLogo): ?>
+                                <img src="<?= $caminhoLogo ?>?v=<?= time() ?>" alt="<?= $nomeMod ?>">
+                            <?php else: ?>
+                                <i class="bi bi-shield-fill fs-1 text-secondary opacity-50"></i>
+                            <?php endif; ?>
+                        </div>
 
-                            <h3 class="fw-bold text-dark mb-1" style="font-size: 1.4rem;"><?= $nomeMod ?></h3>
-                            
-                            <p class="text-muted small mb-4" style="min-height: 38px;">
-                                <?= !empty($mod['lema']) ? htmlspecialchars($mod['lema']) : (!empty($mod['publico_alvo']) ? htmlspecialchars($mod['publico_alvo']) : 'Acampamento Paroquial') ?>
-                            </p>
+                        <div class="card-info">
+                            <div>
+                                <h3 class="card-title-text"><?= $nomeMod ?></h3>
+                                <p class="card-subtitle-text">
+                                    <?= !empty($mod['lema']) ? htmlspecialchars($mod['lema']) : (!empty($mod['publico_alvo']) ? htmlspecialchars($mod['publico_alvo']) : 'Acampamento Paroquial') ?>
+                                </p>
+                            </div>
 
                             <a href="dashboard-acampamento.php?modalidade_id=<?= $mod['id'] ?>" 
                                class="btn btn-card-action w-100 d-flex align-items-center justify-content-center gap-2">
@@ -331,7 +351,7 @@ if (isset($stmt)) {
     </div>
 </div>
 
-<!-- MODAL ADICIONAR NOVO ACAMPAMENTO (APENAS NOME E LEMA) -->
+<!-- MODAL NOVO ACAMPAMENTO -->
 <?php if ($eh_geral): ?>
 <div class="modal fade" id="modalNovaEdicao" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -364,7 +384,7 @@ if (isset($stmt)) {
 </div>
 <?php endif; ?>
 
-<!-- MODAL CONFIRMAÇÃO DE LOGOUT -->
+<!-- MODAL LOGOUT -->
 <div class="modal fade" id="modalConfirmarLogout" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content border-0 rounded-4 overflow-hidden shadow-lg text-center">

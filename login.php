@@ -9,12 +9,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $login_input = trim($_POST['usuario'] ?? '');
     $senha_input = trim($_POST['senha'] ?? '');
 
+
     if (!empty($login_input) && !empty($senha_input)) {
         $stmt = $conn->prepare("SELECT * FROM usuarios WHERE email = ? OR nome = ? LIMIT 1");
         $stmt->bind_param("ss", $login_input, $login_input);
         $stmt->execute();
         $usr = $stmt->get_result()->fetch_assoc();
-
+ 
         if ($usr && password_verify($senha_input, $usr['senha'])) {
             if (isset($usr['ativo']) && $usr['ativo'] == 0) {
                 $erro = "Sua conta está inativa. Procure a coordenação.";
