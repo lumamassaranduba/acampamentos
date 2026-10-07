@@ -16,7 +16,7 @@ if (!isset($_SESSION['usuario_id'])) {
     exit;
 }
 
-// Caminho para a imagem da sua Logo (Altere aqui se o caminho for outro)
+// Caminho para a imagem da sua Logo
 $caminho_logo = 'assets/img/logo.png'; 
 
 // 2. Captura o ID da edição (aceita edicao_id ou id na URL)
@@ -70,7 +70,15 @@ $nomeEdicao     = !empty($edicao['nome']) ? htmlspecialchars($edicao['nome']) : 
 $anoEdicao      = intval($edicao['ano'] ?? date('Y'));
 $statusEdicao   = strtolower($edicao['status'] ?? 'inativa');
 $isAtiva        = ($statusEdicao === 'ativa');
+$is_inativa     = !$isAtiva;
 $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
+
+// 5. BLOQUEIO DE SEGURANÇA NO BACKEND (PHP)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_inativa) {
+    $_SESSION['mensagem_erro'] = "Esta edição está inativa e encontra-se em modo de leitura estrita. Alterações não são permitidas.";
+    header("Location: edicao-detalhes.php?edicao_id={$edicao_id}&modalidade_id={$modalidade_id}");
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -222,6 +230,12 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
             color: #ffffff;
         }
 
+        .banner-inativa {
+            background-color: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            color: #475569;
+        }
+
         @media (max-width: 768px) {
             .main-content {
                 padding: 16px;
@@ -264,6 +278,27 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
 </nav>
 
 <main class="main-content">
+
+    <!-- ALERTAS DE SESSÃO -->
+    <?php if (isset($_SESSION['mensagem_erro'])): ?>
+        <div class="alert alert-danger alert-dismissible fade show rounded-3 mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <?= htmlspecialchars($_SESSION['mensagem_erro']) ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <?php unset($_SESSION['mensagem_erro']); ?>
+    <?php endif; ?>
+
+    <!-- BANNER DE EDIÇÃO INATIVA (MODO LEITURA ESTRITA) -->
+    <?php if ($is_inativa): ?>
+        <div class="alert banner-inativa d-flex align-items-center gap-3 rounded-4 shadow-sm mb-4 p-3">
+            <i class="bi bi-lock-fill fs-3 text-secondary"></i>
+            <div>
+                <strong class="d-block text-dark">Modo Estrito de Leitura (Histórico)</strong>
+                Esta edição foi marcada como <strong>Inativa</strong>. As informações estão visíveis apenas para consulta e qualquer tentativa de alteração será bloqueada.
+            </div>
+        </div>
+    <?php endif; ?>
 
     <!-- CABEÇALHO DA EDIÇÃO -->
     <div class="bg-white p-4 rounded-4 border mb-4 shadow-sm d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3" style="border-color: #e7e5e4 !important;">
@@ -314,7 +349,18 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
             </div>
         </a>
 
-        <!-- 3. Cronograma -->
+        <!-- 3. Histórico Geral (NOVO CARD) -->
+        <a href="historico-campistas.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
+            <div class="card-modulo-icon">
+                <i class="bi bi-journal-bookmark-fill"></i>
+            </div>
+            <div>
+                <h6 class="fw-bold m-0">Histórico Geral</h6>
+                <span class="text-muted small">Ficha e histórico de serviço</span>
+            </div>
+        </a>
+
+        <!-- 4. Cronograma -->
         <a href="cronograma.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-calendar-week"></i>
@@ -325,7 +371,7 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
             </div>
         </a>
 
-        <!-- 4. Espiritualidade -->
+        <!-- 5. Espiritualidade -->
         <a href="espiritualidade.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-heart-pulse-fill"></i>
@@ -336,7 +382,7 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
             </div>
         </a>
 
-        <!-- 5. Apostila de Música -->
+        <!-- 6. Apostila de Música -->
         <a href="apostila-musica.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-music-note-list"></i>
@@ -347,7 +393,7 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
             </div>
         </a>
 
-        <!-- 6. Pregações -->
+        <!-- 7. Pregações -->
         <a href="pregacoes-dinamicas.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-book-half"></i>
@@ -358,7 +404,7 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
             </div>
         </a>
 
-        <!-- 7. Lista de Compras -->
+        <!-- 8. Lista de Compras -->
         <a href="compras.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-cart-check"></i>
@@ -369,7 +415,7 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
             </div>
         </a>
 
-        <!-- 8. Missa -->
+        <!-- 9. Missa -->
         <a href="missa.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-bell-fill"></i>
@@ -380,7 +426,7 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
             </div>
         </a>
 
-        <!-- 9. Recreação -->
+        <!-- 10. Recreação -->
         <a href="recreacao.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-controller"></i>
@@ -391,7 +437,7 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
             </div>
         </a>
 
-        <!-- 10. Apostila da Manutenção -->
+        <!-- 11. Apostila da Manutenção -->
         <a href="manutencao.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-tools"></i>
@@ -402,7 +448,7 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
             </div>
         </a>
 
-        <!-- 11. Pasta dos Desafios -->
+        <!-- 12. Pasta dos Desafios -->
         <a href="desafios.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-trophy-fill"></i>
@@ -418,5 +464,34 @@ $cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- BLOQUEIO VIA JAVASCRIPT SE A EDIÇÃO FOR INATIVA -->
+<?php if ($is_inativa): ?>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // 1. Desativa todos os campos de formulário e botões de ação/salvamento
+    const elementosControle = document.querySelectorAll('form input, form select, form textarea, form button, button[type="submit"]');
+    elementosControle.forEach(el => {
+        el.disabled = true;
+    });
+
+    // 2. Oculta botões de adicionar, editar ou excluir dinâmicos
+    const botoesAcao = document.querySelectorAll('.btn-salvar, .btn-editar, .btn-excluir, .btn-adicionar');
+    botoesAcao.forEach(el => {
+        el.style.display = 'none';
+    });
+
+    // 3. Intercepta envios de formulário via JS
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            alert('Esta edição está inativa. Operações de alteração não são permitidas.');
+            return false;
+        });
+    });
+});
+</script>
+<?php endif; ?>
+
 </body>
 </html>

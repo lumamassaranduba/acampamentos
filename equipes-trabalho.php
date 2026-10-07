@@ -38,15 +38,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($equipe_id > 0 && $voluntario_id > 0) {
             $stmt_check = $conn->prepare("SELECT id FROM equipe_membros WHERE equipe_id = ? AND voluntario_id = ?");
-            $stmt_check->bind_param("ii", $equipe_id, $voluntario_id);
-            $stmt_check->execute();
+            $stmt_check->bind_param("ii", $equipe_id, $voluntario_id);$stmt_check->execute();
             if ($stmt_check->get_result()->num_rows == 0) {
-                $stmt = $conn->prepare("INSERT INTO equipe_membros (equipe_id, voluntario_id, e_coordenador) VALUES (?, ?, ?)");
-                $stmt->bind_param("iii", $equipe_id, $voluntario_id, $e_coordenador);
-                $stmt->execute();
-                $mensagem_sucesso = "Voluntário alocado com sucesso!";
+                $stmt =$conn->prepare("INSERT INTO equipe_membros (equipe_id, voluntario_id, e_coordenador) VALUES (?, ?, ?)");
+                $stmt->bind_param("iii", $equipe_id, $voluntario_id,$e_coordenador);
+                $stmt->execute();$mensagem_sucesso = "Voluntário alocado com sucesso!";
             } else {
                 $mensagem_erro = "Este voluntário já está alocado nesta equipe.";
+            }
+        }
+    }
+
+    // Mover Voluntário para Outra Equipe (Drag and Drop)
+    if ($acao === 'mover_membro') {
+        $membro_id = intval($_POST['membro_id'] ?? 0);
+        $nova_equipe_id = intval($_POST['nova_equipe_id'] ?? 0);
+
+        if ($membro_id > 0 &&$nova_equipe_id > 0) {
+            $stmt =$conn->prepare("UPDATE equipe_membros SET equipe_id = ? WHERE id = ?");
+            $stmt->bind_param("ii", $nova_equipe_id,$membro_id);
+            if ($stmt->execute()) {
+                if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+                    echo json_encode(['status' => 'success']);
+                    exit;
+                }$mensagem_sucesso = "Voluntário movido com sucesso!";
+            } else {
+                if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+                    echo json_encode(['status' => 'error', 'message' => 'Erro ao mover voluntário.']);
+                    exit;
+                }
+                $mensagem_erro = "Erro ao mover voluntário.";
             }
         }
     }
@@ -55,32 +76,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($acao === 'toggle_coordenador') {
         $membro_id = intval($_POST['membro_id'] ?? 0);
         $status = intval($_POST['status'] ?? 0);
-        $stmt = $conn->prepare("UPDATE equipe_membros SET e_coordenador = ? WHERE id = ?");
-        $stmt->bind_param("ii", $status, $membro_id);
-        $stmt->execute();
-        $mensagem_sucesso = "Status de liderança atualizado!";
+        $stmt =$conn->prepare("UPDATE equipe_membros SET e_coordenador = ? WHERE id = ?");
+        $stmt->bind_param("ii", $status,$membro_id);
+        $stmt->execute();$mensagem_sucesso = "Status de liderança atualizado!";
     }
 
     // Remover Voluntário da Equipe
     if ($acao === 'remover_membro') {
         $membro_id = intval($_POST['membro_id'] ?? 0);
-        $stmt = $conn->prepare("DELETE FROM equipe_membros WHERE id = ?");
+        $stmt =$conn->prepare("DELETE FROM equipe_membros WHERE id = ?");
         $stmt->bind_param("i", $membro_id);
-        $stmt->execute();
-        $mensagem_sucesso = "Voluntário removido da equipe.";
+        $stmt->execute();$mensagem_sucesso = "Voluntário removido da equipe.";
     }
 }
 
 // BUSCAS
-$stmt = $conn->prepare("SELECT * FROM equipes_trabalho WHERE edicao_id = ? ORDER BY nome ASC");
-$stmt->bind_param("i", $edicao_id);
-$stmt->execute();
-$equipes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt =$conn->prepare("SELECT * FROM equipes_trabalho WHERE edicao_id = ? ORDER BY nome ASC");
+$stmt->bind_param("i", $edicao_id);$stmt->execute();
+$equipes =$stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-$stmt_geral = $conn->prepare("SELECT id, nome, telefone FROM equipe_geral WHERE edicao_id = ? ORDER BY nome ASC");
-$stmt_geral->bind_param("i", $edicao_id);
-$stmt_geral->execute();
-$voluntarios_geral = $stmt_geral->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt_geral =$conn->prepare("SELECT id, nome, telefone FROM equipe_geral WHERE edicao_id = ? ORDER BY nome ASC");
+$stmt_geral->bind_param("i", $edicao_id);$stmt_geral->execute();
+$voluntarios_geral =$stmt_geral->get_result()->fetch_all(MYSQLI_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -101,8 +118,14 @@ $voluntarios_geral = $stmt_geral->get_result()->fetch_all(MYSQLI_ASSOC);
         .topbar-efata { background-color: var(--efata-dark); border-bottom: 2px solid var(--efata-gold); color: #fff; }
         .btn-gold { background-color: var(--efata-gold); color: #fff; font-weight: 600; border: none; }
         .btn-gold:hover { background-color: #B38E48; color: #fff; }
-        .card-equipe { background: #fff; border-radius: 16px; border: 1px solid #E2E8F0; }
+        .card-equipe { background: #fff; border-radius: 16px; border: 1px solid #E2E8F0; transition: border-color 0.2s, background-color 0.2s; }
+        .card-equipe.drag-over { border: 2px dashed var(--efata-gold) !important; background-color: #FFFDF5 !important; }
         
+        /* Item arrastável */
+        .draggable-item { cursor: grab; user-select: none; }
+        .draggable-item:active { cursor: grabbing; }
+        .draggable-item.dragging { opacity: 0.4; }
+
         /* RN04: Destaque visual em Negrito para Coordenadores */
         .coordenador-item {
             font-weight: 700 !important;
@@ -116,75 +139,139 @@ $voluntarios_geral = $stmt_geral->get_result()->fetch_all(MYSQLI_ASSOC);
             border-radius: 0.375rem;
             padding: 0.5rem 0.75rem;
         }
+
+        /* Esconder tabela de impressão na tela */
+        .print-only { display: none; }
+
+        /* ESTILOS EXCLUSIVOS DE IMPRESSÃO */
+        @media print {
+            body { background-color: #fff !important; color: #000 !important; font-family: Arial, sans-serif !important; }
+            .no-print, .topbar-efata, .alert, .btn, form, .card-equipe { display: none !important; }
+            .print-only { display: block !important; }
+            
+            .container { max-width: 100% !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+            
+            /* Tabela de impressão */
+            .table-print-equipe {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 25px;
+                page-break-inside: avoid;
+            }
+            .table-print-equipe th, .table-print-equipe td {
+                border: 1px solid #333;
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+            .table-print-equipe thead th {
+                background-color: #0F172A !important;
+                color: #fff !important;
+                font-size: 16px;
+                font-weight: bold;
+                text-align: left;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .table-print-equipe .header-cols th {
+                background-color: #E2E8F0 !important;
+                color: #000 !important;
+                font-size: 12px;
+                text-transform: uppercase;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .table-print-equipe tr.print-coordenador {
+                background-color: #FEF3C7 !important;
+                font-weight: bold;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .badge-print-coord {
+                display: inline-block;
+                background-color: #D97706 !important;
+                color: #fff !important;
+                padding: 2px 6px;
+                font-size: 10px;
+                border-radius: 4px;
+                margin-left: 6px;
+                text-transform: uppercase;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
     </style>
 </head>
 <body>
 
-    <header class="topbar-efata py-3 px-4 d-flex align-items-center justify-content-between sticky-top">
+    <header class="topbar-efata py-3 px-4 d-flex align-items-center justify-content-between sticky-top no-print">
         <div class="d-flex align-items-center gap-3">
             <a href="equipe-hub.php?edicao_id=<?= $edicao_id ?>" class="btn btn-sm btn-outline-light rounded-circle">
                 <i class="bi bi-arrow-left"></i>
             </a>
             <h5 class="fw-bold m-0 text-white">2. Divisão das Equipes de Trabalho</h5>
         </div>
-        <button class="btn btn-gold btn-sm px-3 rounded-3" data-bs-toggle="modal" data-bs-target="#modalNovaEquipe">
-            <i class="bi bi-plus-lg me-1"></i> Criar Nova Equipe
-        </button>
+        <div class="d-flex gap-2">
+            <button onclick="window.print()" class="btn btn-outline-light btn-sm px-3 rounded-3">
+                <i class="bi bi-printer-fill me-1"></i> Imprimir Equipes
+            </button>
+            <button class="btn btn-gold btn-sm px-3 rounded-3" data-bs-toggle="modal" data-bs-target="#modalNovaEquipe">
+                <i class="bi bi-plus-lg me-1"></i> Criar Nova Equipe
+            </button>
+        </div>
     </header>
 
     <main class="container py-4">
 
         <?php if (!empty($mensagem_sucesso)): ?>
-            <div class="alert alert-success alert-dismissible fade show"><?= $mensagem_sucesso ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+            <div class="alert alert-success alert-dismissible fade show no-print"><?= $mensagem_sucesso ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
         <?php endif; ?>
 
         <?php if (!empty($mensagem_erro)): ?>
-            <div class="alert alert-danger alert-dismissible fade show"><?= $mensagem_erro ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+            <div class="alert alert-danger alert-dismissible fade show no-print"><?= $mensagem_erro ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
         <?php endif; ?>
 
-        <div class="row g-4">
+        <!-- LAYOUT TELA (CARDS) -->
+        <div class="row g-4 no-print">
             <?php if (empty($equipes)): ?>
                 <div class="col-12 text-center py-5 text-muted">
                     <h5>Nenhuma equipe cadastrada.</h5>
                     <p>Clique em "+ Criar Nova Equipe" para cadastrar um setor (Ex: Cozinha, Secretaria, Apoio...).</p>
                 </div>
             <?php else: ?>
-                <?php foreach ($equipes as $eq): ?>
+                <?php foreach ($equipes as$eq): ?>
                     <?php
-                    $stmt_m = $conn->prepare("SELECT em.id as membro_id, em.e_coordenador, eg.nome, eg.telefone, eg.tamanho_camiseta 
+                    $stmt_m =$conn->prepare("SELECT em.id as membro_id, em.e_coordenador, eg.nome, eg.telefone, eg.tamanho_camiseta 
                                              FROM equipe_membros em 
                                              JOIN equipe_geral eg ON em.voluntario_id = eg.id 
                                              WHERE em.equipe_id = ? 
                                              ORDER BY em.e_coordenador DESC, eg.nome ASC");
-                    $stmt_m->bind_param("i", $eq['id']);
-                    $stmt_m->execute();
-                    $membros = $stmt_m->get_result()->fetch_all(MYSQLI_ASSOC);
+                    $stmt_m->bind_param("i", $eq['id']);$stmt_m->execute();
+                    $membros =$stmt_m->get_result()->fetch_all(MYSQLI_ASSOC);
                     ?>
                     <div class="col-12 col-md-6">
-                        <div class="card-equipe p-4 h-100 d-flex flex-column justify-content-between">
+                        <div class="card-equipe p-4 h-100 d-flex flex-column justify-content-between drop-zone" data-equipe-id="<?= $eq['id'] ?>">
                             <div>
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <h5 class="fw-bold text-dark m-0"><i class="bi bi-diagram-3-fill text-warning me-2"></i><?= htmlspecialchars($eq['nome']) ?></h5>
                                     <span class="badge bg-dark"><?= count($membros) ?> Integrantes</span>
                                 </div>
 
-                                <!-- Lista dos Integrantes -->
+                                <!-- Lista dos Integrantes na Tela -->
                                 <h6 class="fw-bold small text-muted mb-2">MEMBROS DA EQUIPE:</h6>
-                                <ul class="list-group mb-3">
+                                <ul class="list-group mb-3 target-list">
                                     <?php if (empty($membros)): ?>
-                                        <li class="list-group-item text-center text-muted small py-3">Nenhum voluntário alocado nesta equipe.</li>
+                                        <li class="list-group-item text-center text-muted small py-3 empty-msg">Nenhum voluntário alocado nesta equipe.</li>
                                     <?php else: ?>
-                                        <?php foreach ($membros as $m): ?>
-                                            <li class="list-group-item d-flex justify-content-between align-items-center py-2 <?= $m['e_coordenador'] ? 'coordenador-item' : '' ?>">
+                                        <?php foreach ($membros as$m): ?>
+                                            <li class="list-group-item d-flex justify-content-between align-items-center py-2 draggable-item <?= $m['e_coordenador'] ? 'coordenador-item' : '' ?>" draggable="true" data-membro-id="<?= $m['membro_id'] ?>">
                                                 <div>
-                                                    <!-- RN04: Nome do Coordenador com destaque em Negrito -->
                                                     <?= htmlspecialchars($m['nome']) ?>
                                                     <?php if ($m['e_coordenador']): ?>
                                                         <span class="badge bg-warning text-dark ms-1"><i class="bi bi-star-fill"></i> Coordenador</span>
                                                     <?php endif; ?>
-                                                    <br><small class="text-muted fw-normal"><?= htmlspecialchars($m['telefone']) ?> | Camiseta: <?= $m['tamanho_camiseta'] ?></small>
+                                                    <br><small class="text-muted fw-normal"><?= htmlspecialchars($m['telefone']) ?> &#124; Camiseta: <?= $m['tamanho_camiseta'] ?></small>
                                                 </div>
-                                                <div class="d-flex gap-1">
+                                                <div class="d-flex gap-1 no-print">
                                                     <form action="equipes-trabalho.php?edicao_id=<?= $edicao_id ?>" method="POST" class="d-inline">
                                                         <input type="hidden" name="acao" value="toggle_coordenador">
                                                         <input type="hidden" name="membro_id" value="<?= $m['membro_id'] ?>">
@@ -207,18 +294,67 @@ $voluntarios_geral = $stmt_geral->get_result()->fetch_all(MYSQLI_ASSOC);
                                 </ul>
                             </div>
 
-                            <button class="btn btn-outline-dark btn-sm w-100 rounded-3 mt-2" onclick="abrirModalAlocar(<?= $eq['id'] ?>, '<?= htmlspecialchars(addslashes($eq['nome'])) ?>')">
-                                <i class="bi bi-person-plus"></i> Alocar Voluntário da Equipe Geral
+                            <button class="btn btn-outline-dark btn-sm w-100 rounded-3 mt-2 no-print" onclick="abrirModalAlocar(<?= $eq['id'] ?>, '<?= htmlspecialchars(addslashes($eq['nome'])) ?>')">
+                                <i class="bi bi-person-plus"></i> Alocar servo da Equipe Geral
                             </button>
                         </div>
                     </div>
                 <?php endforeach; ?>
             <?php endif; ?>
         </div>
+
+        <!-- LAYOUT DE IMPRESSÃO (TABELAS) -->
+        <div class="print-only">
+            <h3 class="text-center fw-bold mb-4" style="text-transform: uppercase;">Equipes de Trabalho</h3>
+            <?php foreach ($equipes as$eq): ?>
+                <?php
+                $stmt_m =$conn->prepare("SELECT em.id as membro_id, em.e_coordenador, eg.nome, eg.telefone, eg.tamanho_camiseta 
+                                         FROM equipe_membros em 
+                                         JOIN equipe_geral eg ON em.voluntario_id = eg.id 
+                                         WHERE em.equipe_id = ? 
+                                         ORDER BY em.e_coordenador DESC, eg.nome ASC");
+                $stmt_m->bind_param("i", $eq['id']);$stmt_m->execute();
+                $membros =$stmt_m->get_result()->fetch_all(MYSQLI_ASSOC);
+                ?>
+                <table class="table-print-equipe">
+                    <thead>
+                        <tr>
+                            <th colspan="3">EQUIPE: <?= mb_strtoupper(htmlspecialchars($eq['nome'])) ?> (<?= count($membros) ?> Integrantes)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="header-cols">
+                            <th style="width: 50%;">Nome</th>
+                            <th style="width: 30%;">Telefone</th>
+                            <th style="width: 20%; text-align: center;">Camiseta</th>
+                        </tr>
+                        <?php if (empty($membros)): ?>
+                            <tr>
+                                <td colspan="3" style="text-align: center; color: #666; font-style: italic;">Nenhum servo alocado nesta equipe.</td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($membros as$m): ?>
+                                <tr class="<?= $m['e_coordenador'] ? 'print-coordenador' : '' ?>">
+                                    <td>
+                                        <?= htmlspecialchars($m['nome']) ?>
+                                        <?php if ($m['e_coordenador']): ?>
+                                            <span class="badge-print-coord">Coordenador</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><?= htmlspecialchars($m['telefone']) ?></td>
+                                    <td style="text-align: center;"><?= htmlspecialchars($m['tamanho_camiseta']) ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            <?php endforeach; ?>
+        </div>
+
     </main>
 
     <!-- Modal Nova Equipe -->
-    <div class="modal fade" id="modalNovaEquipe" tabindex="-1">
+    <div class="modal fade no-print" id="modalNovaEquipe" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content rounded-4 border-0">
                 <div class="modal-header bg-dark text-white">
@@ -243,7 +379,7 @@ $voluntarios_geral = $stmt_geral->get_result()->fetch_all(MYSQLI_ASSOC);
     </div>
 
     <!-- Modal Alocar Voluntário (RF09 / RN03) -->
-    <div class="modal fade" id="modalAlocar" tabindex="-1">
+    <div class="modal fade no-print" id="modalAlocar" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content rounded-4 border-0">
                 <div class="modal-header bg-dark text-white">
@@ -255,10 +391,10 @@ $voluntarios_geral = $stmt_geral->get_result()->fetch_all(MYSQLI_ASSOC);
                     <input type="hidden" name="equipe_id" id="alocar_equipe_id">
                     <div class="modal-body p-4">
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Selecione o Voluntário da Equipe Geral *</label>
+                            <label class="form-label fw-semibold">Selecione o servo da Equipe Geral *</label>
                             <select name="voluntario_id" id="select-voluntario" placeholder="Digite para pesquisar o nome..." required>
                                 <option value="">Digite para pesquisar...</option>
-                                <?php foreach ($voluntarios_geral as $vg): ?>
+                                <?php foreach ($voluntarios_geral as$vg): ?>
                                     <option value="<?= $vg['id'] ?>"><?= htmlspecialchars($vg['nome']) ?> (<?= htmlspecialchars($vg['telefone']) ?>)</option>
                                 <?php endforeach; ?>
                             </select>
@@ -289,13 +425,73 @@ $voluntarios_geral = $stmt_geral->get_result()->fetch_all(MYSQLI_ASSOC);
         let tomSelectInstance = null;
 
         document.addEventListener("DOMContentLoaded", function () {
-            // Inicializar o campo com busca rápida
+            // Inicializar TomSelect
             tomSelectInstance = new TomSelect("#select-voluntario", {
                 create: false,
-                sortField: {
-                    field: "text",
-                    direction: "asc"
-                }
+                sortField: { field: "text", direction: "asc" }
+            });
+
+            // Configuração do Drag and Drop
+            const draggables = document.querySelectorAll('.draggable-item');
+            const dropZones = document.querySelectorAll('.drop-zone');
+
+            draggables.forEach(draggable => {
+                draggable.addEventListener('dragstart', (e) => {
+                    draggable.classList.add('dragging');
+                    e.dataTransfer.setData('text/plain', draggable.dataset.membroId);
+                });
+
+                draggable.addEventListener('dragend', () => {
+                    draggable.classList.remove('dragging');
+                });
+            });
+
+            dropZones.forEach(zone => {
+                zone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    zone.classList.add('drag-over');
+                });
+
+                zone.addEventListener('dragleave', () => {
+                    zone.classList.remove('drag-over');
+                });
+
+                zone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    zone.classList.remove('drag-over');
+
+                    const membroId = e.dataTransfer.getData('text/plain');
+                    const novaEquipeId = zone.dataset.equipeId;
+                    const draggedElement = document.querySelector(`[data-membro-id="${membroId}"]`);
+
+                    if (!draggedElement) return;
+
+                    const currentZone = draggedElement.closest('.drop-zone');
+                    if (currentZone && currentZone.dataset.equipeId === novaEquipeId) return;
+
+                    // Enviar requisição para mover no backend via AJAX
+                    const formData = new FormData();
+                    formData.append('acao', 'mover_membro');
+                    formData.append('membro_id', membroId);
+                    formData.append('nova_equipe_id', novaEquipeId);
+
+                    fetch(`equipes-trabalho.php?edicao_id=<?= $edicao_id ?>`, {
+                        method: 'POST',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            window.location.reload();
+                        } else {
+                            alert(data.message || 'Erro ao mover voluntário.');
+                        }
+                    })
+                    .catch(() => {
+                        window.location.reload();
+                    });
+                });
             });
         });
 
@@ -303,7 +499,6 @@ $voluntarios_geral = $stmt_geral->get_result()->fetch_all(MYSQLI_ASSOC);
             document.getElementById('alocar_equipe_id').value = id;
             document.getElementById('alocar_nome_equipe').innerText = nome;
             
-            // Limpa a seleção anterior do Tom Select quando abre o modal
             if (tomSelectInstance) {
                 tomSelectInstance.clear();
             }

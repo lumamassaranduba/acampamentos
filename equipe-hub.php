@@ -83,10 +83,10 @@ $total_setores = $conn->query("SELECT COUNT(*) as total FROM equipes_trabalho WH
                             <i class="bi bi-people-fill"></i>
                         </div>
                         <h4 class="fw-bold text-dark mb-2">1. Equipe Geral de Trabalho</h4>
-                        <p class="text-muted small">Cadastro inicial obrigatório de todos os voluntários (Nome, Telefone, Tamanho de Camiseta) e contagem geral.</p>
+                        <p class="text-muted small">Cadastro inicial obrigatório de todos os servos (Nome, Telefone, Tamanho de Camiseta) e contagem geral.</p>
                     </div>
                     <div class="pt-3 border-top mt-3 d-flex justify-content-between align-items-center">
-                        <small class="fw-semibold text-gold"><?= $total_geral ?> Voluntários Cadastrados</small>
+                        <small class="fw-semibold text-gold"><?= $total_geral ?> Servos Cadastrados</small>
                         <i class="bi bi-arrow-right-circle-fill fs-5 text-gold"></i>
                     </div>
                 </a>
@@ -100,7 +100,7 @@ $total_setores = $conn->query("SELECT COUNT(*) as total FROM equipes_trabalho WH
                             <i class="bi bi-diagram-3-fill"></i>
                         </div>
                         <h4 class="fw-bold text-dark mb-2">2. Divisão por Funções e Setores</h4>
-                        <p class="text-muted small">Criação dos setores (Cozinha, Secretaria, Apoio, etc.), alocação dos voluntários e destaque para os Coordenadores.</p>
+                        <p class="text-muted small">Criação dos setores (Cozinha, Secretaria, Apoio, etc.), alocação dos servos e destaque para os Coordenadores.</p>
                     </div>
                     <div class="pt-3 border-top mt-3 d-flex justify-content-between align-items-center">
                         <small class="fw-semibold text-gold"><?= $total_setores ?> Setores Criados</small>
