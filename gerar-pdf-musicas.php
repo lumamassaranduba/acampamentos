@@ -13,7 +13,7 @@ if ($edicao_id === 0) {
     die("Edição não especificada.");
 }
 
-// 2. Busca informações do Acampamento/Edição (Tabela corrigida para 'edicoes')
+// 2. Busca informações do Acampamento/Edição
 $nome_edicao = "Edição #" . $edicao_id;
 $stmt_info = $conn->prepare("SELECT e.nome AS edicao_nome, m.nome AS modalidade_nome 
                             FROM edicoes e 
@@ -31,7 +31,7 @@ if ($stmt_info) {
     }
 }
 
-// 3. Busca Músicas ESTRITAMENTE para esta edição
+// 3. Busca Músicas para esta edição
 $stmt = $conn->prepare("SELECT * FROM apostilas_musicas WHERE edicao_id = ? ORDER BY categoria, subcategoria, titulo ASC");
 $stmt->bind_param("i", $edicao_id);
 $stmt->execute();
@@ -51,11 +51,11 @@ if ($result && $result->num_rows > 0) {
     }
 }
 
-// Rótulos amigáveis para as categorias
+// Rótulos no estilo do modelo da foto
 $titulos_categorias = [
-    'TEMA' => '🔥 MÚSICAS TEMA',
-    'MISSA' => '⛪ MÚSICAS DA MISSA',
-    'MOMENTOS' => '🕊️ PREGAÇÕES E MOMENTOS'
+    'TEMA' => 'TEMAS',
+    'MISSA' => 'MISSA',
+    'MOMENTOS' => 'PREGAÇÕES'
 ];
 ?>
 <!DOCTYPE html>
@@ -64,101 +64,114 @@ $titulos_categorias = [
     <meta charset="UTF-8">
     <title>Apostila de Músicas - <?= htmlspecialchars($nome_edicao) ?></title>
     <style>
+        /* TAMANHO A5 (METADE DO A4) OU A4 EM 2 COLUNAS */
         @page {
-            size: A4;
-            margin: 15mm 15mm 15mm 15mm;
+            size: A4 landscape; /* Imprime em A4 Paisagem para dobrar ao meio como livreto */
+            margin: 10mm 12mm;
         }
 
         body {
             font-family: Arial, sans-serif;
-            color: #0F172A;
+            color: #000000;
             margin: 0;
             padding: 0;
-            font-size: 12px;
+            font-size: 11px;
+            line-height: 1.35;
+        }
+
+        /* DIVISÃO DA FOLHA EM 2 COLUNAS (LIVRETO MEIA FOLHA) */
+        .conteudo-apostila {
+            column-count: 2;
+            column-gap: 25mm;
+            column-rule: 1px dashed #cccccc;
         }
 
         .header-print {
             text-align: center;
-            border-bottom: 2px solid #C5A059;
-            padding-bottom: 12px;
-            margin-bottom: 20px;
+            border-bottom: 2px solid #000000;
+            padding-bottom: 6px;
+            margin-bottom: 15px;
         }
 
         .header-print h1 {
             margin: 0;
-            font-size: 22px;
-            color: #0F172A;
+            font-size: 18px;
+            color: #000000;
             text-transform: uppercase;
         }
 
         .header-print h3 {
-            margin: 4px 0 0 0;
-            font-size: 14px;
-            color: #C5A059;
+            margin: 2px 0 0 0;
+            font-size: 12px;
+            color: #444444;
             font-weight: normal;
         }
 
+        /* ESTILO DOS TÍTULOS COM BALINHA/BULLET COMO NA IMAGEM */
         .categoria-titulo {
-            background-color: #0F172A;
-            color: #ffffff;
-            padding: 8px 12px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
-            margin-top: 25px;
-            margin-bottom: 15px;
-            border-left: 4px solid #C5A059;
-            border-radius: 4px;
+            text-transform: uppercase;
+            margin-top: 15px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
             page-break-after: avoid;
+            break-after: avoid;
+        }
+
+        .categoria-titulo::before {
+            content: "•";
+            font-size: 18px;
+            margin-right: 4px;
         }
 
         .subcategoria-titulo {
-            color: #C5A059;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: bold;
             text-transform: uppercase;
-            border-bottom: 1px solid #E2E8F0;
-            padding-bottom: 4px;
-            margin-top: 15px;
-            margin-bottom: 10px;
+            margin-top: 10px;
+            margin-bottom: 8px;
             page-break-after: avoid;
+            break-after: avoid;
         }
 
-        .musica-card {
-            border: 1px solid #E2E8F0;
-            border-radius: 6px;
-            padding: 12px;
-            margin-bottom: 12px;
+        /* ESTRUTURA DAS MÚSICAS CENTRALIZADAS COMO NA FOTO */
+        .musica-bloco {
+            margin-bottom: 18px;
             page-break-inside: avoid;
-            background-color: #FAFAFA;
+            break-inside: avoid;
         }
 
         .musica-cabecalho {
-            border-bottom: 1px solid #CBD5E1;
-            padding-bottom: 4px;
+            text-align: center;
             margin-bottom: 8px;
         }
 
         .musica-titulo {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: bold;
-            color: #0F172A;
+            text-transform: uppercase;
+            text-decoration: underline;
+            display: block;
         }
 
         .musica-artista {
-            font-size: 11px;
-            color: #C5A059;
-            font-weight: bold;
-            float: right;
+            font-size: 10px;
+            color: #333333;
+            display: block;
+            margin-top: 2px;
         }
 
         .musica-letra {
             white-space: pre-line;
-            font-size: 11px;
-            line-height: 1.5;
-            color: #334155;
+            font-size: 10.5px;
+            color: #000000;
+            text-align: left;
         }
 
-        /* Oculta os botões de ação ao imprimir/salvar PDF */
+        /* OCULTA BOTÕES AO IMPRIMIR */
         @media print {
             .no-print {
                 display: none !important;
@@ -167,18 +180,18 @@ $titulos_categorias = [
 
         .bar-acoes {
             background: #0F172A;
-            padding: 12px;
+            padding: 10px;
             text-align: center;
-            margin-bottom: 20px;
-            border-radius: 8px;
+            margin-bottom: 15px;
+            border-radius: 6px;
         }
 
         .btn-imprimir {
             background-color: #C5A059;
             color: #ffffff;
             border: none;
-            padding: 8px 20px;
-            font-size: 14px;
+            padding: 8px 18px;
+            font-size: 13px;
             font-weight: bold;
             border-radius: 4px;
             cursor: pointer;
@@ -187,44 +200,49 @@ $titulos_categorias = [
 </head>
 <body>
 
-    <!-- Barra Superior com Ação de Impressão/Download -->
+    <!-- Barra de Impressão -->
     <div class="bar-acoes no-print">
-        <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir / Salvar em PDF</button>
+        <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir Apostila (Meia Folha / Livreto)</button>
     </div>
 
-    <!-- Cabeçalho Oficial -->
-    <div class="header-print">
-        <h1>Apostila de Músicas</h1>
-        <h3><?= htmlspecialchars($nome_edicao) ?></h3>
-    </div>
+    <div class="conteudo-apostila">
+        
+        <!-- Cabeçalho Principal -->
+        <div class="header-print">
+            <h1>Apostila de Músicas</h1>
+            <h3><?= htmlspecialchars($nome_edicao) ?></h3>
+        </div>
 
-    <!-- Conteúdo da Apostila -->
-    <?php foreach ($musicas as $cat_chave => $subcategorias): ?>
-        <?php if (!empty($subcategorias)): ?>
-            <div class="categoria-titulo">
-                <?= $titulos_categorias[$cat_chave] ?? $cat_chave ?>
-            </div>
+        <!-- Músicas Formatadas -->
+        <?php foreach ($musicas as $cat_chave => $subcategorias): ?>
+            <?php if (!empty($subcategorias)): ?>
+                
+                <div class="categoria-titulo">
+                    <span style="text-decoration: underline;"><?= $titulos_categorias[$cat_chave] ?? $cat_chave ?></span>
+                </div>
 
-            <?php foreach ($subcategorias as $subcat => $lista_musicas): ?>
-                <?php if ($subcat !== 'Geral'): ?>
-                    <div class="subcategoria-titulo"><?= htmlspecialchars($subcat) ?></div>
-                <?php endif; ?>
+                <?php foreach ($subcategorias as $subcat => $lista_musicas): ?>
+                    <?php if ($subcat !== 'Geral'): ?>
+                        <div class="subcategoria-titulo"><?= htmlspecialchars($subcat) ?></div>
+                    <?php endif; ?>
 
-                <?php foreach ($lista_musicas as $m): ?>
-                    <div class="musica-card">
-                        <div class="musica-cabecalho">
-                            <?php if (!empty($m['artista'])): ?>
-                                <span class="musica-artista"><?= htmlspecialchars($m['artista']) ?></span>
-                            <?php endif; ?>
-                            <span class="musica-titulo"><?= htmlspecialchars($m['titulo']) ?></span>
-                            <div style="clear: both;"></div>
+                    <?php foreach ($lista_musicas as $m): ?>
+                        <div class="musica-bloco">
+                            <div class="musica-cabecalho">
+                                <span class="musica-titulo"><?= htmlspecialchars($m['titulo']) ?></span>
+                                <?php if (!empty($m['artista'])): ?>
+                                    <span class="musica-artista"><?= htmlspecialchars($m['artista']) ?></span>
+                                <?php endif; ?>
+                            </div>
+                            <div class="musica-letra"><?= htmlspecialchars($m['letra']) ?></div>
                         </div>
-                        <div class="musica-letra"><?= htmlspecialchars($m['letra']) ?></div>
-                    </div>
+                    <?php endforeach; ?>
                 <?php endforeach; ?>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    <?php endforeach; ?>
+
+            <?php endif; ?>
+        <?php endforeach; ?>
+
+    </div>
 
 </body>
 </html>

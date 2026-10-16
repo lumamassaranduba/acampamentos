@@ -12,17 +12,36 @@ if ($edicao_id === 0) {
     die("Edição não especificada.");
 }
 
+// 1. Verificar se a edição está inativa
+$stmt_ed = $conn->prepare("SELECT * FROM edicoes WHERE id = ?");
+$stmt_ed->bind_param("i", $edicao_id);
+$stmt_ed->execute();
+$edicao = $stmt_ed->get_result()->fetch_assoc();
+
+$edicao_inativa = false;
+if ($edicao) {
+    $status_edicao = strtoupper($edicao['status'] ?? '');
+    if ($status_edicao === 'INATIVA' || $status_edicao === 'FINALIZADA' || (isset($edicao['ativa']) && $edicao['ativa'] == 0)) {
+        $edicao_inativa = true;
+    }
+}
+
 $mensagem_sucesso = '';
+$mensagem_erro = '';
 
 // PROCESSAMENTO: Salvar / Editar Atribuições da Equipe
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['acao'] === 'salvar_atribuicoes') {
-    $equipe_id = intval($_POST['equipe_id'] ?? 0);
-    $atribuicoes = trim($_POST['atribuicoes'] ?? '');
+    if ($edicao_inativa) {
+        $mensagem_erro = "Esta edição está inativa. Não é possível alterar atribuições.";
+    } else {
+        $equipe_id = intval($_POST['equipe_id'] ?? 0);
+        $atribuicoes = trim($_POST['atribuicoes'] ?? '');
 
-    $stmt = $conn->prepare("UPDATE equipes_trabalho SET atribuicoes = ? WHERE id = ? AND edicao_id = ?");
-    $stmt->bind_param("sii", $atribuicoes, $equipe_id, $edicao_id);
-    $stmt->execute();
-    $mensagem_sucesso = "Funções e atribuições atualizadas com sucesso!";
+        $stmt = $conn->prepare("UPDATE equipes_trabalho SET atribuicoes = ? WHERE id = ? AND edicao_id = ?");
+        $stmt->bind_param("sii", $atribuicoes, $equipe_id, $edicao_id);
+        $stmt->execute();
+        $mensagem_sucesso = "Funções e atribuições atualizadas com sucesso!";
+    }
 }
 
 // BUSCA DE EQUIPES
@@ -69,9 +88,11 @@ $equipes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                 <i class="bi bi-arrow-left"></i>
             </a>
             <h5 class="fw-bold m-0 text-white">3. Atribuições e Funções das Equipes</h5>
+            <?php if ($edicao_inativa): ?>
+                <span class="badge bg-secondary"><i class="bi bi-lock-fill me-1"></i>Edição Inativa (Apenas Leitura)</span>
+            <?php endif; ?>
         </div>
         <div>
-            <!-- Botão de Exportar PDF Geral com todas as funções -->
             <a href="pdf-funcoes-equipe.php?edicao_id=<?= $edicao_id ?>" target="_blank" class="btn btn-outline-light btn-sm px-3 rounded-3">
                 <i class="bi bi-file-earmark-pdf-fill text-danger me-1"></i> Exportar PDF Geral
             </a>
@@ -84,11 +105,14 @@ $equipes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             <div class="alert alert-success alert-dismissible fade show"><?= $mensagem_sucesso ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
         <?php endif; ?>
 
+        <?php if (!empty($mensagem_erro)): ?>
+            <div class="alert alert-danger alert-dismissible fade show"><?= $mensagem_erro ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <?php endif; ?>
+
         <div class="row g-4">
             <?php if (empty($equipes)): ?>
                 <div class="col-12 text-center py-5 text-muted">
                     <h5>Nenhuma equipe cadastrada para esta edição.</h5>
-                    <p>Cadastre as equipes na **Parte 2 (Divisão das Equipes)** para depois registrar as funções aqui.</p>
                 </div>
             <?php else: ?>
                 <?php foreach ($equipes as $eq): ?>
@@ -102,7 +126,7 @@ $equipes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                     </div>
                                     <div>
                                         <h5 class="fw-bold text-dark m-0"><?= htmlspecialchars($eq['nome']) ?></h5>
-                                        <small class="text-muted">Clique para ver ou editar as funções</small>
+                                        <small class="text-muted"><?= $edicao_inativa ? 'Clique para visualizar as funções' : 'Clique para ver ou editar as funções' ?></small>
                                     </div>
                                 </div>
 
@@ -134,14 +158,14 @@ $equipes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                     
                     <div class="modal-body p-4">
                         <label class="form-label fw-bold text-dark">Descreva todas as funções e responsabilidades desta equipe:</label>
-                        <p class="text-muted small mb-2">Guarde aqui todas as orientações do que esta equipe precisa fazer (antes do evento, durante o acampamento, escala de trabalho, materiais, etc.).</p>
-                        
-                        <textarea name="atribuicoes" id="modal_texto_atribuicoes" class="form-control rounded-3 p-3" rows="12" placeholder="Digite ou cole aqui todas as atribuições da equipe..."></textarea>
+                        <textarea name="atribuicoes" id="modal_texto_atribuicoes" class="form-control rounded-3 p-3" rows="12" <?= $edicao_inativa ? 'readonly' : '' ?> placeholder="Digite ou cole aqui todas as atribuições da equipe..."></textarea>
                     </div>
 
                     <div class="modal-footer bg-light d-flex justify-content-between">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                        <button type="submit" class="btn btn-gold px-4">Salvar Atribuições</button>
+                        <?php if (!$edicao_inativa): ?>
+                            <button type="submit" class="btn btn-gold px-4">Salvar Atribuições</button>
+                        <?php endif; ?>
                     </div>
                 </form>
             </div>

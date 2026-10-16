@@ -127,7 +127,6 @@ if (!$missa) {
             <h1><?= htmlspecialchars($missa['titulo']) ?></h1>
             <div class="subtitulo">
                 <?= htmlspecialchars($missa['dia_missa']) ?> 
-                <?= !empty($missa['horario']) ? ' - ' . date('H:i', strtotime($missa['horario'])) : '' ?>
             </div>
         </div>
 
@@ -144,7 +143,6 @@ if (!$missa) {
             <h1><?= htmlspecialchars($missa['titulo']) ?></h1>
             <div class="subtitulo">
                 <?= htmlspecialchars($missa['dia_missa']) ?> 
-                <?= !empty($missa['horario']) ? ' - ' . date('H:i', strtotime($missa['horario'])) : '' ?>
             </div>
         </div>
 

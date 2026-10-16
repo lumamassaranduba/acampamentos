@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $e_coordenador = isset($_POST['e_coordenador']) ? 1 : 0;
 
         if ($equipe_id > 0 && $voluntario_id > 0) {
-            $stmt_check = $conn->prepare("SELECT id FROM equipe_membros WHERE equipe_id = ? AND voluntario_id = ?");
+            $stmt_check =$conn->prepare("SELECT id FROM equipe_membros WHERE equipe_id = ? AND voluntario_id = ?");
             $stmt_check->bind_param("ii", $equipe_id, $voluntario_id);$stmt_check->execute();
             if ($stmt_check->get_result()->num_rows == 0) {
                 $stmt =$conn->prepare("INSERT INTO equipe_membros (equipe_id, voluntario_id, e_coordenador) VALUES (?, ?, ?)");
@@ -143,7 +143,7 @@ $voluntarios_geral =$stmt_geral->get_result()->fetch_all(MYSQLI_ASSOC);
         /* Esconder tabela de impressão na tela */
         .print-only { display: none; }
 
-        /* ESTILOS EXCLUSIVOS DE IMPRESSÃO */
+        /* ESTILOS EXCLUSIVOS DE IMPRESSÃO / PDF */
         @media print {
             body { background-color: #fff !important; color: #000 !important; font-family: Arial, sans-serif !important; }
             .no-print, .topbar-efata, .alert, .btn, form, .card-equipe { display: none !important; }
@@ -151,17 +151,21 @@ $voluntarios_geral =$stmt_geral->get_result()->fetch_all(MYSQLI_ASSOC);
             
             .container { max-width: 100% !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
             
-            /* Tabela de impressão */
+            /* Tabela de impressão com fechamento total de bordas no lado direito */
             .table-print-equipe {
                 width: 100%;
                 border-collapse: collapse;
                 margin-bottom: 25px;
                 page-break-inside: avoid;
+                border: 1px solid #000 !important; /* Garante a caixa externa fechada */
             }
             .table-print-equipe th, .table-print-equipe td {
-                border: 1px solid #333;
+                border: 1px solid #000 !important; /* Garante todas as bordas internas e externas */
                 padding: 8px 12px;
                 font-size: 13px;
+                background-color: #fff !important;
+                color: #000 !important;
+                box-sizing: border-box !important;
             }
             .table-print-equipe thead th {
                 background-color: #0F172A !important;
@@ -169,34 +173,28 @@ $voluntarios_geral =$stmt_geral->get_result()->fetch_all(MYSQLI_ASSOC);
                 font-size: 16px;
                 font-weight: bold;
                 text-align: left;
+                border: 1px solid #000 !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
             .table-print-equipe .header-cols th {
-                background-color: #E2E8F0 !important;
+                background-color: #fff !important;
                 color: #000 !important;
                 font-size: 12px;
-                text-transform: uppercase;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-            .table-print-equipe tr.print-coordenador {
-                background-color: #FEF3C7 !important;
                 font-weight: bold;
+                text-transform: uppercase;
+                border: 1px solid #000 !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
-            .badge-print-coord {
-                display: inline-block;
-                background-color: #D97706 !important;
-                color: #fff !important;
-                padding: 2px 6px;
-                font-size: 10px;
-                border-radius: 4px;
-                margin-left: 6px;
-                text-transform: uppercase;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+            .table-print-equipe tr.print-coordenador,
+            .table-print-equipe tr.print-coordenador td {
+                background-color: #fff !important;
+                font-weight: bold !important;
+            }
+            .texto-coord-print {
+                font-weight: bold;
+                margin-left: 4px;
             }
         }
     </style>
@@ -324,9 +322,9 @@ $voluntarios_geral =$stmt_geral->get_result()->fetch_all(MYSQLI_ASSOC);
                     </thead>
                     <tbody>
                         <tr class="header-cols">
-                            <th style="width: 50%;">Nome</th>
-                            <th style="width: 30%;">Telefone</th>
-                            <th style="width: 20%; text-align: center;">Camiseta</th>
+                            <th style="width: 50%;">NOME</th>
+                            <th style="width: 30%;">TELEFONE</th>
+                            <th style="width: 20%; text-align: center;">CAMISETA</th>
                         </tr>
                         <?php if (empty($membros)): ?>
                             <tr>
@@ -338,7 +336,7 @@ $voluntarios_geral =$stmt_geral->get_result()->fetch_all(MYSQLI_ASSOC);
                                     <td>
                                         <?= htmlspecialchars($m['nome']) ?>
                                         <?php if ($m['e_coordenador']): ?>
-                                            <span class="badge-print-coord">Coordenador</span>
+                                            <span class="texto-coord-print">(Coordenador)</span>
                                         <?php endif; ?>
                                     </td>
                                     <td><?= htmlspecialchars($m['telefone']) ?></td>
