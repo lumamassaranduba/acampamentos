@@ -81,17 +81,25 @@ if (isset($stmt)) {
             box-shadow: 0 4px 20px rgba(10, 25, 47, 0.15);
         }
 
+        /* Ícone redondo com a logo */
         .brand-icon {
             width: 42px;
             height: 42px;
-            background-color: rgba(255, 255, 255, 0.1);
-            color: var(--gold-primary);
-            border: 1px solid rgba(212, 175, 55, 0.4);
-            border-radius: 12px;
+            background-color: #ffffff;
+            border: 1px solid var(--gold-primary);
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.3rem;
+            overflow: hidden;
+            padding: 3px;
+        }
+
+        .brand-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 50%;
         }
 
         .main-container {
@@ -250,7 +258,7 @@ if (isset($stmt)) {
 <nav class="top-navbar d-flex align-items-center justify-content-between">
     <div class="d-flex align-items-center gap-3">
         <div class="brand-icon shadow-sm">
-            <i class="bi bi-shield-check"></i>
+            <img src="./uploads/logos/logoefata.png" alt="Logo Éfata" onerror="this.onerror=null; this.src='assets/img/logo.png';">
         </div>
         <div>
             <h6 class="fw-bold m-0 text-white"><?= htmlspecialchars($_SESSION['usuario_nome'] ?? 'Usuário') ?></h6>
@@ -281,7 +289,7 @@ if (isset($stmt)) {
 <div class="main-container">
     <div class="text-center mb-4">
         <h2 class="fw-bold text-dark m-0 mb-1" style="font-size: 1.8rem;">Selecione o Acampamento</h2>
-        <p class="text-muted m-0" style="font-size: 0.9rem;">Escolha um abaixo para gerenciar equipes, cronograma e espiritualidade.</p>
+        <p class="text-muted m-0" style="font-size: 0.9rem;">Escolha um acampamento abaixo para gerenciar.</p>
     </div>
 
     <!-- GRID DE CARDS -->

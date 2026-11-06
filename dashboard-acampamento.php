@@ -137,31 +137,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao_editar_modalidad
     $cor_nova          = trim($_POST['cor'] ?? '#292524');
 
     if (!empty($nome_novo)) {
+        // Tenta adicionar a coluna 'logo' de forma segura sem estourar excepção se ela já existir
+        try {
+            $conn->query("ALTER TABLE modalidades ADD COLUMN logo VARCHAR(255) DEFAULT NULL");
+        } catch (mysqli_sql_exception $e) {
+            // Se o erro for de coluna duplicada, ignoramos e prosseguimos normalmente
+        }
+
         $stmt_up = $conn->prepare("UPDATE modalidades SET nome = ?, lema = ?, publico_alvo = ?, cor = ? WHERE id = ?");
         $stmt_up->bind_param("ssssi", $nome_novo, $lema_novo, $publico_alvo_novo, $cor_nova, $modalidade_id);
         
         if ($stmt_up->execute()) {
             $mensagem_sucesso = "Informações atualizadas!";
             
-            if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
+            $pasta_destino = 'uploads/logos/';
+            if (!is_dir($pasta_destino)) {
+                mkdir($pasta_destino, 0777, true);
+            }
+
+            $nomeLimpo = mb_strtolower(trim($nome_novo), 'UTF-8');
+            $nomeLimpo = preg_replace('/[áàãâä]/u', 'a', $nomeLimpo);
+            $nomeLimpo = preg_replace('/[éèêë]/u', 'e', $nomeLimpo);
+            $nomeLimpo = preg_replace('/[íìîï]/u', 'i', $nomeLimpo);
+            $nomeLimpo = preg_replace('/[óòõôö]/u', 'o', $nomeLimpo);
+            $nomeLimpo = preg_replace('/[úùûü]/u', 'u', $nomeLimpo);
+
+            // Se recebeu a imagem recortada via Base64 do Cropper.js
+            if (!empty($_POST['logo_cropped'])) {
+                $imgData = $_POST['logo_cropped'];
+                $imgData = str_replace('data:image/png;base64,', '', $imgData);
+                $imgData = str_replace(' ', '+', $imgData);
+                $data = base64_decode($imgData);
+
+                $caminho_final = $pasta_destino . $nomeLimpo . '.png';
+                file_put_contents($caminho_final, $data);
+
+                // Atualiza o caminho da imagem recortada
+                $stmt_img = $conn->prepare("UPDATE modalidades SET logo = ? WHERE id = ?");
+                $stmt_img->bind_param("si", $caminho_final, $modalidade_id);
+                $stmt_img->execute();
+            } 
+            // Fallback para upload direto simples
+            elseif (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
                 $ext = strtolower(pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION));
                 $extensoes_permitidas = ['png', 'jpg', 'jpeg', 'webp'];
 
                 if (in_array($ext, $extensoes_permitidas)) {
-                    $nomeLimpo = mb_strtolower(trim($nome_novo), 'UTF-8');
-                    $nomeLimpo = preg_replace('/[áàãâä]/u', 'a', $nomeLimpo);
-                    $nomeLimpo = preg_replace('/[éèêë]/u', 'e', $nomeLimpo);
-                    $nomeLimpo = preg_replace('/[íìîï]/u', 'i', $nomeLimpo);
-                    $nomeLimpo = preg_replace('/[óòõôö]/u', 'o', $nomeLimpo);
-                    $nomeLimpo = preg_replace('/[úùûü]/u', 'u', $nomeLimpo);
-
-                    $pasta_destino = 'uploads/logos/';
-                    if (!is_dir($pasta_destino)) {
-                        mkdir($pasta_destino, 0777, true);
-                    }
-
                     $caminho_final = $pasta_destino . $nomeLimpo . '.' . $ext;
                     move_uploaded_file($_FILES['logo']['tmp_name'], $caminho_final);
+
+                    $stmt_img = $conn->prepare("UPDATE modalidades SET logo = ? WHERE id = ?");
+                    $stmt_img->bind_param("si", $caminho_final, $modalidade_id);
+                    $stmt_img->execute();
                 }
             }
         } else {
@@ -243,6 +270,10 @@ $total_edicoes = count($edicoes);
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <!-- Cropper.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+
     <style>
         :root {
             --brand-color: <?= $cor ?>;
@@ -517,8 +548,7 @@ $total_edicoes = count($edicoes);
 
         foreach ($edicoes as $ed): 
             $siglaModalidade = htmlspecialchars($nome);
-            $anoEdicao       = intval($ed['ano']);
-            $nomeEdicao      = !empty($ed['nome']) ? htmlspecialchars($ed['nome']) : "{$index_ordinal}° {$siglaModalidade}";
+            $anoEdicao       = intval($ed['ano']);$nomeEdicao      = !empty($ed['nome']) ? htmlspecialchars($ed['nome']) : "{$index_ordinal}° {$siglaModalidade}";
             
             $tituloCard      = "{$nomeEdicao} - {$anoEdicao}";
             $statusEdicao    = strtolower($ed['status'] ?? 'inativa');
@@ -590,7 +620,7 @@ $total_edicoes = count($edicoes);
                     </p>
                 </div>
 
-                <a href="edicao-detalhes.php?edicao_id=<?= $ed['id'] ?>&modalidade_id=<?= $modalidade_id ?>" class="btn btn-card-action w-100 rounded-3 btn-sm d-flex align-items-center justify-content-center gap-2 py-2">
+                <a href="edicao-detalhes.php?edicao_id=<?= $ed['id'] ?>&modalidade_id=<?=$modalidade_id ?>" class="btn btn-card-action w-100 rounded-3 btn-sm d-flex align-items-center justify-content-center gap-2 py-2">
                     <span><?= $isAtiva ? 'Acessar Painel' : 'Visualizar Histórico' ?></span>
                     <i class="bi bi-arrow-right"></i>
                 </a>
@@ -611,7 +641,82 @@ $total_edicoes = count($edicoes);
     </div>
 </main>
 
-<!-- MODAL CONFIRMAR MUDANÇA DE STATUS (ATIVA / INATIVA) -->
+<!-- MODAL EDITAR ACAMPAMENTO COM FERRAMENTA DE CORTAR LOGO (CROPPER.JS) -->
+<div class="modal fade" id="modalEditarAcampamento" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Editar Informações</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formEditarAcampamento" action="" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="acao_editar_modalidade" value="1">
+                <input type="hidden" name="logo_cropped" id="logoCroppedBase64Edit">
+
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label small fw-medium text-secondary">Nome / Sigla</label>
+                                <input type="text" name="nome" class="form-control" value="<?= htmlspecialchars($nome) ?>" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-medium text-secondary">Lema</label>
+                                <input type="text" name="lema" class="form-control" placeholder="Ex: frase do acampamento" value="<?= htmlspecialchars($lema) ?>">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-medium text-secondary">Público-Alvo</label>
+                                <input type="text" name="publico_alvo" class="form-control" value="<?= htmlspecialchars($publico_alvo) ?>">
+                            </div>
+
+                            <div class="row g-2 mb-3">
+                                <div class="col-8">
+                                    <label class="form-label small fw-medium text-secondary">Logo</label>
+                                    <input type="file" id="inputLogoAcampamentoEdit" name="logo" class="form-control" accept="image/*">
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small fw-medium text-secondary">Cor Tema</label>
+                                    <input type="color" name="cor" class="form-control form-control-color w-100" value="<?= htmlspecialchars($cor) ?>">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Área de Ajuste/Enquadramento da Logo -->
+                        <div class="col-md-6 text-center">
+                            <label class="form-label small fw-medium text-secondary d-block text-start">Ajuste do Enquadramento da Logo</label>
+                            <div class="img-container-cropper bg-light rounded-3 border d-flex align-items-center justify-content-center overflow-hidden" style="height: 220px; width: 100%;">
+                                <img id="imageToCropEdit" src="" alt="Pré-visualização" style="max-width: 100%; display: none;">
+                                <div id="placeholderCropperTextEdit" class="text-muted small p-3">
+                                    <?php if ($caminhoLogo): ?>
+                                        <img src="<?= $caminhoLogo ?>?v=<?= time() ?>" alt="Logo Atual" style="max-height: 120px; max-width: 100%; object-fit: contain;" class="mb-2 d-block mx-auto">
+                                        <span class="d-block text-secondary">Selecione um novo arquivo para alterar/cortar a logo.</span>
+                                    <?php else: ?>
+                                        <span>Selecione uma imagem para ajustar o enquadramento.</span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer d-flex justify-content-between align-items-center">
+                    <button type="button" class="btn btn-outline-danger rounded-3 fw-medium" onclick="confirmarExclusaoAcampamento()">
+                        <i class="bi bi-trash3-fill me-1"></i> Excluir Acampamento
+                    </button>
+
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-light rounded-3 fw-medium" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-dark rounded-3 px-4 fw-medium">Salvar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAIS AUXILIARES -->
 <div class="modal fade" id="modalConfirmarStatus" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -636,7 +741,6 @@ $total_edicoes = count($edicoes);
     </div>
 </div>
 
-<!-- MODAL CRIAR NOVA EDIÇÃO -->
 <div class="modal fade" id="modalNovaEdicao" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -666,7 +770,6 @@ $total_edicoes = count($edicoes);
     </div>
 </div>
 
-<!-- MODAL EDITAR EDIÇÃO -->
 <div class="modal fade" id="modalEditarEdicao" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -698,7 +801,6 @@ $total_edicoes = count($edicoes);
     </div>
 </div>
 
-<!-- MODAL EXCLUIR EDIÇÃO -->
 <div class="modal fade" id="modalExcluirEdicao" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -722,64 +824,14 @@ $total_edicoes = count($edicoes);
     </div>
 </div>
 
-<!-- MODAL EDITAR ACAMPAMENTO -->
-<div class="modal fade" id="modalEditarAcampamento" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold">Editar Informações</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="formEditarAcampamento" action="" method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="acao_editar_modalidade" value="1">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label small fw-medium text-secondary">Nome / Sigla</label>
-                        <input type="text" name="nome" class="form-control" value="<?= htmlspecialchars($nome) ?>" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-medium text-secondary">Lema</label>
-                        <input type="text" name="lema" class="form-control" placeholder="Ex: frase do acampamento" value="<?= htmlspecialchars($lema) ?>">
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-medium text-secondary">Público-Alvo</label>
-                        <input type="text" name="publico_alvo" class="form-control" value="<?= htmlspecialchars($publico_alvo) ?>">
-                    </div>
-
-                    <div class="row g-2 mb-3">
-                        <div class="col-8">
-                            <label class="form-label small fw-medium text-secondary">Logo</label>
-                            <input type="file" name="logo" class="form-control" accept="image/*">
-                        </div>
-                        <div class="col-4">
-                            <label class="form-label small fw-medium text-secondary">Cor Tema</label>
-                            <input type="color" name="cor" class="form-control form-control-color w-100" value="<?= htmlspecialchars($cor) ?>">
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer d-flex justify-content-between align-items-center">
-                    <button type="button" class="btn btn-outline-danger rounded-3 fw-medium" onclick="confirmarExclusaoAcampamento()">
-                        <i class="bi bi-trash3-fill me-1"></i> Excluir Acampamento
-                    </button>
-
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-light rounded-3 fw-medium" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-dark rounded-3 px-4 fw-medium">Salvar</button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <!-- FORMULÁRIO OCULTO PARA EXCLUSÃO DO ACAMPAMENTO -->
 <form id="formExcluirAcampamento" action="" method="POST" style="display: none;">
     <input type="hidden" name="acao_excluir_modalidade" value="1">
 </form>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
 <script>
 function confirmarExclusaoAcampamento() {
     if (confirm("Tem certeza que deseja excluir permanentemente este acampamento? Esta ação não poderá ser desfeita.")) {
@@ -787,7 +839,62 @@ function confirmarExclusaoAcampamento() {
     }
 }
 
+let cropperEdit = null;
+
 document.addEventListener('DOMContentLoaded', function () {
+
+    // Cropper.js no Modal de Editar Informações
+    const inputEdit = document.getElementById('inputLogoAcampamentoEdit');
+    if (inputEdit) {
+        inputEdit.addEventListener('change', function (e) {
+            const files = e.target.files;
+            if (files && files.length > 0) {
+                const file = files[0];
+                const reader = new FileReader();
+
+                reader.onload = function (event) {
+                    const image = document.getElementById('imageToCropEdit');
+                    const placeholder = document.getElementById('placeholderCropperTextEdit');
+
+                    image.src = event.target.result;
+                    image.style.display = 'block';
+                    placeholder.style.display = 'none';
+
+                    if (cropperEdit) {
+                        cropperEdit.destroy();
+                    }
+
+                    cropperEdit = new Cropper(image, {
+                        aspectRatio: 4 / 3,
+                        viewMode: 1,
+                        background: false,
+                        autoCropArea: 0.9,
+                    });
+                };
+
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    const formEdit = document.getElementById('formEditarAcampamento');
+    if (formEdit) {
+        formEdit.addEventListener('submit', function (e) {
+            if (cropperEdit) {
+                e.preventDefault();
+                
+                const canvas = cropperEdit.getCroppedCanvas({
+                    width: 600,
+                    height: 450
+                });
+
+                document.getElementById('logoCroppedBase64Edit').value = canvas.toDataURL('image/png');
+                this.submit();
+            }
+        });
+    }
+
+    // Handlers dos modais
     const modalConfirmarStatus = document.getElementById('modalConfirmarStatus');
     if (modalConfirmarStatus) {
         modalConfirmarStatus.addEventListener('show.bs.modal', function (event) {

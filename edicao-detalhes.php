@@ -405,13 +405,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_inativa) {
         </a>
 
         <!-- 8. Lista de Compras -->
-        <a href="compras.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
+        <a href="contas.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-cart-check"></i>
             </div>
             <div>
-                <h6 class="fw-bold m-0">Lista de Compras</h6>
-                <span class="text-muted small">Mercado e materiais</span>
+                <h6 class="fw-bold m-0">Contas</h6>
+                <span class="text-muted small">Lista de compras, fornecedores e gastos</span>
             </div>
         </a>
 
@@ -438,7 +438,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_inativa) {
         </a>
 
         <!-- 11. Apostila da Manutenção -->
-        <a href="manutencao.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
+        <a href="apostila-manutencao.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-tools"></i>
             </div>
@@ -449,7 +449,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_inativa) {
         </a>
 
         <!-- 12. Pasta dos Desafios -->
-        <a href="desafios.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
+        <a href="pasta-desafios.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-trophy-fill"></i>
             </div>
