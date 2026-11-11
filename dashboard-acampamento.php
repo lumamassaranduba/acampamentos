@@ -134,14 +134,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao_editar_modalidad
     $nome_novo         = trim($_POST['nome'] ?? '');
     $lema_novo         = trim($_POST['lema'] ?? '');
     $publico_alvo_novo = trim($_POST['publico_alvo'] ?? '');
-    $cor_nova          = trim($_POST['cor'] ?? '#292524');
+    $cor_nova          = trim($_POST['cor'] ?? '#C5A059');
 
     if (!empty($nome_novo)) {
-        // Tenta adicionar a coluna 'logo' de forma segura sem estourar excepção se ela já existir
         try {
             $conn->query("ALTER TABLE modalidades ADD COLUMN logo VARCHAR(255) DEFAULT NULL");
         } catch (mysqli_sql_exception $e) {
-            // Se o erro for de coluna duplicada, ignoramos e prosseguimos normalmente
         }
 
         $stmt_up = $conn->prepare("UPDATE modalidades SET nome = ?, lema = ?, publico_alvo = ?, cor = ? WHERE id = ?");
@@ -162,7 +160,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao_editar_modalidad
             $nomeLimpo = preg_replace('/[óòõôö]/u', 'o', $nomeLimpo);
             $nomeLimpo = preg_replace('/[úùûü]/u', 'u', $nomeLimpo);
 
-            // Se recebeu a imagem recortada via Base64 do Cropper.js
             if (!empty($_POST['logo_cropped'])) {
                 $imgData = $_POST['logo_cropped'];
                 $imgData = str_replace('data:image/png;base64,', '', $imgData);
@@ -172,12 +169,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao_editar_modalidad
                 $caminho_final = $pasta_destino . $nomeLimpo . '.png';
                 file_put_contents($caminho_final, $data);
 
-                // Atualiza o caminho da imagem recortada
                 $stmt_img = $conn->prepare("UPDATE modalidades SET logo = ? WHERE id = ?");
                 $stmt_img->bind_param("si", $caminho_final, $modalidade_id);
                 $stmt_img->execute();
             } 
-            // Fallback para upload direto simples
             elseif (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
                 $ext = strtolower(pathinfo($_FILES['logo']['name'], PATHINFO_EXTENSION));
                 $extensoes_permitidas = ['png', 'jpg', 'jpeg', 'webp'];
@@ -222,10 +217,10 @@ if (!$acampamento) {
 }
 
 $nome         = $acampamento['nome'] ?? 'Acampamento';
-$lema         = $acampamento['lema'] ?? '';
-$publico_alvo = $acampamento['publico_alvo'] ?? 'Jovens e Adultos';
+$lema         = !empty($acampamento['lema']) ? $acampamento['lema'] : 'Acampamento Paroquial Éfata';
+$publico_alvo = $acampamento['publico_alvo'] ?? '';
 $icone        = !empty($acampamento['icone']) ? $acampamento['icone'] : 'bi-shield-check';
-$cor          = !empty($acampamento['cor']) ? $acampamento['cor'] : '#292524';
+$cor          = !empty($acampamento['cor']) ? $acampamento['cor'] : '#C5A059';
 
 // Verificação do Logo
 $nomeLimpo = mb_strtolower(trim($nome), 'UTF-8');
@@ -276,11 +271,14 @@ $total_edicoes = count($edicoes);
 
     <style>
         :root {
-            --brand-color: <?= $cor ?>;
-            --bg-main: #f8fafc;
-            --border-color: #e2e8f0;
-            --text-primary: #0f172a;
-            --text-muted: #64748b;
+            --navy-dark: #0A192F;
+            --navy-light: #1E293B;
+            --gold-primary: #C5A059;
+            --gold-hover: #B28D46;
+            --bg-main: #F8FAFC;
+            --border-color: #E2E8F0;
+            --text-primary: #0F172A;
+            --text-muted: #64748B;
         }
 
         body { 
@@ -289,11 +287,54 @@ $total_edicoes = count($edicoes);
             color: var(--text-primary); 
             min-height: 100vh;
         }
-        
+
+        /* Top Navbar Padronizada */
+        .top-navbar {
+            background-color: var(--navy-dark);
+            border-bottom: 2px solid var(--gold-primary);
+            padding: 0.75rem 1.25rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(10, 25, 47, 0.15);
+        }
+
+        .user-brand-block {
+            min-width: 0;
+        }
+
+        .brand-icon {
+            width: 42px;
+            height: 42px;
+            min-width: 42px;
+            background-color: #ffffff;
+            border: 2px solid var(--gold-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 2px;
+        }
+
+        .brand-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 50%;
+        }
+
+        .user-info-text {
+            line-height: 1.2;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         .main-content { 
-            padding: 2.5rem 2rem; 
+            padding: 2rem 1.25rem; 
             width: 100%; 
-            max-width: 1600px; 
+            max-width: 1300px; 
             margin: 0 auto; 
             box-sizing: border-box;
         }
@@ -303,102 +344,131 @@ $total_edicoes = count($edicoes);
             background: #ffffff;
             border: 1px solid var(--border-color);
             border-radius: 20px;
-            padding: 1.5rem 2rem;
-            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
+            padding: 1.5rem 1.75rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
             position: relative;
+        }
+
+        .logo-acampamento-circle {
+            width: 70px;
+            height: 70px;
+            min-width: 70px;
+            border-radius: 50%;
+            background-color: #ffffff;
+            border: 3px solid var(--gold-primary);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             overflow: hidden;
+            padding: 4px;
         }
 
-        .header-banner::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 6px;
+        .logo-acampamento-circle img {
+            width: 100%;
             height: 100%;
-            background-color: var(--brand-color);
+            object-fit: contain;
+            border-radius: 50%;
         }
 
-        .btn-back {
-            background: #f1f5f9;
-            color: #475569;
-            border: 1px solid #e2e8f0;
+        .badge-lema {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            font-style: italic;
+        }
+
+        .badge-target-custom {
+            font-size: 0.72rem;
+            font-weight: 600;
+            background-color: var(--navy-dark);
+            color: var(--gold-primary);
+            padding: 3px 10px;
+            border-radius: 12px;
+        }
+
+        /* Botões */
+        .btn-navy {
+            background-color: var(--navy-dark);
+            color: #ffffff;
+            font-weight: 600;
+            border: 1px solid var(--navy-dark);
             transition: all 0.2s ease;
         }
-        .btn-back:hover {
-            background: #e2e8f0;
-            color: #0f172a;
+
+        .btn-navy:hover {
+            background-color: var(--gold-primary);
+            border-color: var(--gold-primary);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(197, 160, 89, 0.3);
         }
 
-        .icon-circle { 
-            width: 60px; 
-            height: 60px; 
-            border-radius: 16px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-size: 1.5rem; 
-            overflow: hidden; 
-            flex-shrink: 0;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-        .icon-circle img { 
-            width: 100%; 
-            height: 100%; 
-            object-fit: cover; 
+        .btn-outline-gold {
+            border: 1px solid var(--gold-primary);
+            color: var(--navy-dark);
+            font-weight: 600;
+            background: transparent;
+            transition: all 0.2s ease;
         }
 
-        .badge-target {
-            font-size: 0.75rem;
-            font-weight: 500;
-            background-color: #f1f5f9;
-            color: #475569;
-            padding: 4px 12px;
-            border-radius: 20px;
-            border: 1px solid #e2e8f0;
+        .btn-outline-gold:hover {
+            background-color: var(--gold-primary);
+            color: #ffffff;
         }
 
-        /* Grid Layout */
+        .btn-outline-danger-custom {
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #f87171;
+            background: transparent;
+            transition: all 0.2s ease;
+        }
+
+        .btn-outline-danger-custom:hover {
+            background-color: #ef4444;
+            color: #ffffff;
+        }
+
+        /* Grid Cards Edições */
         .row-expansiva {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.25rem;
             width: 100%;
         }
 
-        /* Cards */
         .card-dash { 
             background: #ffffff; 
             border: 1px solid var(--border-color); 
-            border-radius: 18px; 
-            padding: 1.5rem; 
-            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1); 
+            border-radius: 20px; 
+            padding: 1.25rem; 
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
             height: 100%; 
             display: flex; 
             flex-direction: column; 
             justify-content: space-between; 
-            position: relative;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
         }
         
         .card-dash:hover { 
-            border-color: var(--brand-color); 
-            box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.08); 
-            transform: translateY(-3px);
+            border-color: var(--gold-primary); 
+            box-shadow: 0 12px 24px -6px rgba(10, 25, 47, 0.1); 
+            transform: translateY(-4px);
         }
         
         .badge-ordinal { 
             font-size: 0.8rem; 
             font-weight: 600; 
             background-color: #f8fafc; 
-            color: #334155; 
-            padding: 6px 14px; 
+            color: var(--navy-dark); 
+            padding: 5px 12px; 
             border-radius: 8px; 
             border: 1px solid #e2e8f0; 
         }
         
         .card-status-ativa { 
-            border-top: 4px solid var(--brand-color); 
+            border-top: 4px solid var(--gold-primary); 
         }
+
         .card-status-inativa { 
             border-top: 4px solid #cbd5e1; 
             background-color: #f8fafc; 
@@ -410,6 +480,7 @@ $total_edicoes = count($edicoes);
             border: 1px solid #a7f3d0; 
             font-weight: 600;
         }
+
         .badge-inativa { 
             background-color: #f1f5f9; 
             color: #64748b; 
@@ -418,137 +489,156 @@ $total_edicoes = count($edicoes);
         }
 
         .btn-card-action {
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            background-color: #ffffff;
+            background-color: var(--navy-dark);
+            color: #ffffff;
             font-weight: 600;
+            border-radius: 12px;
+            border: 1px solid var(--navy-dark);
+            padding: 0.6rem 1rem;
+            font-size: 0.9rem;
+            text-decoration: none;
             transition: all 0.2s ease;
         }
+
         .btn-card-action:hover {
-            background-color: var(--brand-color);
-            border-color: var(--brand-color);
+            background-color: var(--gold-primary);
+            border-color: var(--gold-primary);
             color: #ffffff !important;
         }
 
-        .dropdown-menu {
-            border-radius: 12px;
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
-            padding: 6px;
-        }
-        .dropdown-item {
-            border-radius: 8px;
-            font-weight: 500;
+        .modal-header-custom {
+            background-color: var(--navy-dark);
+            color: #ffffff;
+            border-bottom: 2px solid var(--gold-primary);
         }
 
-        /* Modal Styles */
-        .modal-content {
-            border-radius: 20px;
-            border: none;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-        }
-        .modal-header {
-            padding: 1.5rem 1.5rem 0.5rem 1.5rem;
-        }
-        .modal-body {
-            padding: 1rem 1.5rem;
-        }
-        .modal-footer {
-            padding: 0.5rem 1.5rem 1.5rem 1.5rem;
-        }
-
-        .form-control, .form-select {
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
-            padding: 0.6rem 0.9rem;
-        }
-        .form-control:focus {
-            border-color: var(--brand-color);
-            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
-        }
-
-        @media (max-width: 768px) {
-            .main-content {
-                padding: 1.25rem 1rem;
+        @media (max-width: 576px) {
+            .top-navbar {
+                padding: 0.65rem 0.85rem;
             }
+
+            .main-content {
+                padding: 1.25rem 0.85rem;
+            }
+
             .header-banner {
-                padding: 1.25rem;
+                padding: 1.1rem;
+            }
+
+            .logo-acampamento-circle {
+                width: 56px;
+                height: 56px;
+                min-width: 56px;
             }
         }
     </style>
 </head>
 <body>
 
+<!-- NAVBAR LIMPA -->
+<nav class="top-navbar d-flex align-items-center justify-content-between gap-2">
+    <div class="d-flex align-items-center gap-2 gap-sm-3 user-brand-block">
+        <div class="brand-icon shadow-sm">
+            <img src="./uploads/logos/logoefata.png" alt="Logo Éfata" onerror="this.onerror=null; this.src='assets/img/logo.png';">
+        </div>
+        <div class="user-info-text">
+            <h6 class="fw-bold m-0 text-white text-truncate" style="font-size: 0.92rem;"><?= htmlspecialchars($_SESSION['usuario_nome'] ?? 'Usuário') ?></h6>
+            <small class="text-light opacity-75 d-block text-truncate" style="font-size: 0.72rem;"><?= htmlspecialchars($perfil) ?></small>
+        </div>
+    </div>
+
+    <div class="d-flex align-items-center gap-2 nav-actions">
+        <button class="btn btn-outline-danger-custom btn-sm rounded-3 px-2 px-sm-3 py-2 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalConfirmarLogout" title="Sair">
+            <i class="bi bi-box-arrow-right"></i>
+            <span class="d-none d-md-inline">Sair</span>
+        </button>
+    </div>
+</nav>
+
 <main class="main-content">
 
     <?php if ($mensagem_sucesso): ?>
-        <div class="alert alert-success rounded-4 mb-4 border-0 shadow-sm alert-dismissible fade show d-flex align-items-center" role="alert">
+        <div class="alert alert-success rounded-4 mb-4 border-0 shadow-sm alert-dismissible fade show d-flex align-items-center">
             <i class="bi bi-check-circle-fill me-2 fs-5"></i>
             <div><?= $mensagem_sucesso ?></div>
-            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
         </div>
     <?php endif; ?>
 
     <?php if ($mensagem_erro): ?>
-        <div class="alert alert-danger rounded-4 mb-4 border-0 shadow-sm alert-dismissible fade show d-flex align-items-center" role="alert">
+        <div class="alert alert-danger rounded-4 mb-4 border-0 shadow-sm alert-dismissible fade show d-flex align-items-center">
             <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
             <div><?= $mensagem_erro ?></div>
-            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
         </div>
     <?php endif; ?>
 
-    <!-- CABEÇALHO SUPERIOR -->
+    <!-- CABEÇALHO DO ACAMPAMENTO COM LEMA -->
     <div class="header-banner mb-4 d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
         <div class="d-flex align-items-center gap-3 w-100 w-md-auto">
-            <a href="dashboard-geral.php" class="btn btn-back btn-sm rounded-3 d-flex align-items-center gap-2 px-3 py-2 flex-shrink-0">
-                <i class="bi bi-arrow-left"></i> <span class="d-none d-sm-inline fw-medium">Voltar</span>
+            <a href="dashboard-geral.php" class="btn text-dark border-0 p-0 fs-4 d-flex align-items-center justify-content-center me-1" title="Voltar ao Painel Geral">
+                <i class="bi bi-arrow-left"></i>
             </a>
 
-            <div class="icon-circle" style="background-color: <?= $cor ?>; color: #fff;">
+            <div class="logo-acampamento-circle">
                 <?php if ($caminhoLogo): ?>
-                    <img src="<?= $caminhoLogo ?>?v=<?= time() ?>" alt="Logo">
+                    <img src="<?= $caminhoLogo ?>?v=<?= time() ?>" alt="Logo <?= htmlspecialchars($nome) ?>">
                 <?php else: ?>
-                    <i class="bi <?= $icone ?>"></i>
+                    <i class="bi <?= $icone ?> fs-2 text-warning"></i>
                 <?php endif; ?>
             </div>
+
             <div class="text-truncate">
-                <h3 class="fw-bold m-0 text-dark text-truncate" style="font-size: calc(1.2rem + 0.3vw);"><?= htmlspecialchars($nome) ?></h3>
-                <span class="badge-target d-inline-block mt-1">
-                    <?= htmlspecialchars($publico_alvo) ?>
-                </span>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <h3 class="fw-bold m-0 text-dark text-truncate" style="font-size: 1.45rem;"><?= htmlspecialchars($nome) ?></h3>
+                    <?php if (!empty($publico_alvo)): ?>
+                        <span class="badge-target-custom"><?= htmlspecialchars($publico_alvo) ?></span>
+                    <?php endif; ?>
+                </div>
+                
+                <!-- FRASE LEMA EXIBIDA -->
+                <p class="badge-lema m-0 mt-1 text-truncate">
+                    <?= htmlspecialchars($lema) ?>
+                </p>
             </div>
         </div>
 
         <div class="d-flex gap-2 w-100 w-md-auto justify-content-start justify-content-md-end flex-wrap">
-            <button class="btn btn-outline-dark btn-sm rounded-3 d-flex align-items-center gap-2 px-3 py-2 flex-fill flex-md-grow-0 justify-content-center fw-medium" data-bs-toggle="modal" data-bs-target="#modalEditarAcampamento">
-                <i class="bi bi-gear-fill"></i>
+            <button class="btn btn-outline-gold btn-sm rounded-3 d-flex align-items-center gap-2 px-3 py-2 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalEditarAcampamento">
+                <i class="bi bi-gear-fill text-warning"></i>
                 <span class="text-nowrap">Editar Informações</span>
             </button>
 
-            <button class="btn btn-dark btn-sm rounded-3 d-flex align-items-center gap-2 px-3 py-2 flex-fill flex-md-grow-0 justify-content-center fw-medium" data-bs-toggle="modal" data-bs-target="#modalNovaEdicao">
-                <i class="bi bi-plus-lg"></i>
+            <button class="btn btn-navy btn-sm rounded-3 d-flex align-items-center gap-2 px-3 py-2 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalNovaEdicao">
+                <i class="bi bi-plus-lg text-warning"></i>
                 <span class="text-nowrap">Nova Edição</span>
             </button>
         </div>
     </div>
 
-    <!-- TÍTULO DAS EDIÇÕES -->
-    <div class="d-flex align-items-center justify-content-between mb-4 mt-2">
+    <!-- SEÇÃO TÍTULO E CONTADOR REFINADO -->
+    <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between mb-4 gap-2">
         <div>
-            <h5 class="fw-bold m-0 text-dark">Edições Registradas</h5>
-            <p class="text-muted small m-0">Gerencie todas as edições ativas e finalizadas de <?= htmlspecialchars($nome) ?></p>
+            <h4 class="fw-bold m-0 text-dark">Edições Registradas</h4>
+            <p class="text-muted small m-0">Gerencie todas as edições ativas e finalizadas do acampamento <?= htmlspecialchars($nome) ?>.</p>
         </div>
-        <span class="badge bg-white text-secondary border px-3 py-2 rounded-3 fs-6 font-monospace fw-normal"><?= $total_edicoes ?> edição(ões)</span>
+
+        <!-- CONTADOR PADRONIZADO E ELEGANTE -->
+        <div class="badge bg-white text-dark border px-3 py-2 rounded-3 shadow-sm d-flex align-items-center gap-2 fw-semibold fs-6">
+            <i class="bi bi-layers-half text-warning fs-5"></i>
+            <span><?= $total_edicoes ?> <?= $total_edicoes === 1 ? 'Edição Cadastrada' : 'Edições Cadastradas' ?></span>
+        </div>
     </div>
 
-    <!-- CARDS DE EDIÇÃO EXPANSIVOS -->
+    <!-- CARDS DAS EDIÇÕES -->
     <div class="row-expansiva">
-
         <?php 
         $index_ordinal = $total_edicoes;
 
         foreach ($edicoes as $ed): 
             $siglaModalidade = htmlspecialchars($nome);
-            $anoEdicao       = intval($ed['ano']);$nomeEdicao      = !empty($ed['nome']) ? htmlspecialchars($ed['nome']) : "{$index_ordinal}° {$siglaModalidade}";
+            $anoEdicao       = intval($ed['ano']);
+            $nomeEdicao      = !empty($ed['nome']) ? htmlspecialchars($ed['nome']) : "{$index_ordinal}° {$siglaModalidade}";
             
             $tituloCard      = "{$nomeEdicao} - {$anoEdicao}";
             $statusEdicao    = strtolower($ed['status'] ?? 'inativa');
@@ -574,7 +664,7 @@ $total_edicoes = count($edicoes);
                                 <button class="btn btn-link text-muted p-1 border-0" type="button" data-bs-toggle="dropdown">
                                     <i class="bi bi-three-dots-vertical fs-5"></i>
                                 </button>
-                                <ul class="dropdown-menu dropdown-menu-end border-0">
+                                <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg rounded-3">
                                     <li>
                                         <button class="dropdown-item small d-flex align-items-center gap-2 py-2" 
                                                 data-bs-toggle="modal" 
@@ -582,7 +672,7 @@ $total_edicoes = count($edicoes);
                                                 data-id="<?= $ed['id'] ?>"
                                                 data-titulo="<?= htmlspecialchars($tituloCard) ?>"
                                                 data-status="<?= $isAtiva ? 'inativar' : 'ativar' ?>">
-                                            <i class="bi <?= $isAtiva ? 'bi-toggle-off text-secondary' : 'bi-toggle-on text-dark' ?>"></i> 
+                                            <i class="bi <?= $isAtiva ? 'bi-toggle-off text-secondary' : 'bi-toggle-on text-success' ?>"></i> 
                                             <?= $isAtiva ? 'Marcar como Inativa' : 'Marcar como Ativa' ?>
                                         </button>
                                     </li>
@@ -616,11 +706,11 @@ $total_edicoes = count($edicoes);
                     
                     <h5 class="fw-bold text-dark mt-2 mb-1"><?= $tituloCard ?></h5>
                     <p class="text-muted small mb-4">
-                        <?= $isAtiva ? 'Gerenciar gestão.' : 'Edição finalizada (Apenas leitura/histórico).' ?>
+                        <?= $isAtiva ? 'Gerenciar edição.' : 'Edição finalizada (Histórico em leitura).' ?>
                     </p>
                 </div>
 
-                <a href="edicao-detalhes.php?edicao_id=<?= $ed['id'] ?>&modalidade_id=<?=$modalidade_id ?>" class="btn btn-card-action w-100 rounded-3 btn-sm d-flex align-items-center justify-content-center gap-2 py-2">
+                <a href="edicao-detalhes.php?edicao_id=<?= $ed['id'] ?>&modalidade_id=<?=$modalidade_id ?>" class="btn btn-card-action w-100 d-flex align-items-center justify-content-center gap-2">
                     <span><?= $isAtiva ? 'Acessar Painel' : 'Visualizar Histórico' ?></span>
                     <i class="bi bi-arrow-right"></i>
                 </a>
@@ -641,57 +731,59 @@ $total_edicoes = count($edicoes);
     </div>
 </main>
 
-<!-- MODAL EDITAR ACAMPAMENTO COM FERRAMENTA DE CORTAR LOGO (CROPPER.JS) -->
+<!-- MODAL EDITAR ACAMPAMENTO -->
 <div class="modal fade" id="modalEditarAcampamento" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold">Editar Informações</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0 rounded-4 overflow-hidden shadow-lg">
+            <div class="modal-header modal-header-custom p-4">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2">
+                    <i class="bi bi-gear-fill text-warning"></i> Editar Informações do Acampamento
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form id="formEditarAcampamento" action="" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="acao_editar_modalidade" value="1">
                 <input type="hidden" name="logo_cropped" id="logoCroppedBase64Edit">
 
-                <div class="modal-body">
+                <div class="modal-body p-4">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label small fw-medium text-secondary">Nome / Sigla</label>
-                                <input type="text" name="nome" class="form-control" value="<?= htmlspecialchars($nome) ?>" required>
+                                <label class="form-label small fw-medium text-dark">Nome / Sigla *</label>
+                                <input type="text" name="nome" class="form-control rounded-3" value="<?= htmlspecialchars($nome) ?>" required>
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label small fw-medium text-secondary">Lema</label>
-                                <input type="text" name="lema" class="form-control" placeholder="Ex: frase do acampamento" value="<?= htmlspecialchars($lema) ?>">
+                                <label class="form-label small fw-medium text-dark">Lema do Acampamento</label>
+                                <input type="text" name="lema" class="form-control rounded-3" placeholder="Ex: Abre-te para uma nova forma..." value="<?= htmlspecialchars($lema) ?>">
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label small fw-medium text-secondary">Público-Alvo</label>
-                                <input type="text" name="publico_alvo" class="form-control" value="<?= htmlspecialchars($publico_alvo) ?>">
+                                <label class="form-label small fw-medium text-dark">Público-Alvo</label>
+                                <input type="text" name="publico_alvo" class="form-control rounded-3" value="<?= htmlspecialchars($publico_alvo) ?>" placeholder="Ex: Crismandos, Jovens...">
                             </div>
 
                             <div class="row g-2 mb-3">
                                 <div class="col-8">
-                                    <label class="form-label small fw-medium text-secondary">Logo</label>
-                                    <input type="file" id="inputLogoAcampamentoEdit" name="logo" class="form-control" accept="image/*">
+                                    <label class="form-label small fw-medium text-dark">Alterar Logo</label>
+                                    <input type="file" id="inputLogoAcampamentoEdit" name="logo" class="form-control rounded-3" accept="image/*">
                                 </div>
                                 <div class="col-4">
-                                    <label class="form-label small fw-medium text-secondary">Cor Tema</label>
-                                    <input type="color" name="cor" class="form-control form-control-color w-100" value="<?= htmlspecialchars($cor) ?>">
+                                    <label class="form-label small fw-medium text-dark">Cor Tema</label>
+                                    <input type="color" name="cor" class="form-control form-control-color w-100 rounded-3" value="<?= htmlspecialchars($cor) ?>">
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Área de Ajuste/Enquadramento da Logo -->
+                        <!-- Área de Corte Cropper.js -->
                         <div class="col-md-6 text-center">
-                            <label class="form-label small fw-medium text-secondary d-block text-start">Ajuste do Enquadramento da Logo</label>
+                            <label class="form-label small fw-medium text-dark d-block text-start">Enquadramento da Logo</label>
                             <div class="img-container-cropper bg-light rounded-3 border d-flex align-items-center justify-content-center overflow-hidden" style="height: 220px; width: 100%;">
                                 <img id="imageToCropEdit" src="" alt="Pré-visualização" style="max-width: 100%; display: none;">
                                 <div id="placeholderCropperTextEdit" class="text-muted small p-3">
                                     <?php if ($caminhoLogo): ?>
-                                        <img src="<?= $caminhoLogo ?>?v=<?= time() ?>" alt="Logo Atual" style="max-height: 120px; max-width: 100%; object-fit: contain;" class="mb-2 d-block mx-auto">
-                                        <span class="d-block text-secondary">Selecione um novo arquivo para alterar/cortar a logo.</span>
+                                        <img src="<?= $caminhoLogo ?>?v=<?= time() ?>" alt="Logo Atual" style="max-height: 120px; max-width: 100%; object-fit: contain;" class="mb-2 d-block mx-auto rounded-circle border border-warning p-1">
+                                        <span class="d-block text-secondary">Selecione uma imagem para ajustar o enquadramento.</span>
                                     <?php else: ?>
                                         <span>Selecione uma imagem para ajustar o enquadramento.</span>
                                     <?php endif; ?>
@@ -701,14 +793,15 @@ $total_edicoes = count($edicoes);
                     </div>
                 </div>
 
-                <div class="modal-footer d-flex justify-content-between align-items-center">
-                    <button type="button" class="btn btn-outline-danger rounded-3 fw-medium" onclick="confirmarExclusaoAcampamento()">
+                <div class="modal-footer bg-light p-3 border-top d-flex justify-content-between align-items-center">
+                    <!-- BOTÃO ABRE O CARD DE CONFIRMAÇÃO EM VEZ DE CONFIRM() -->
+                    <button type="button" class="btn btn-danger rounded-3 fw-medium" data-bs-toggle="modal" data-bs-target="#modalConfirmarExcluirAcampamento">
                         <i class="bi bi-trash3-fill me-1"></i> Excluir Acampamento
                     </button>
 
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-light rounded-3 fw-medium" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-dark rounded-3 px-4 fw-medium">Salvar</button>
+                        <button type="button" class="btn btn-outline-secondary rounded-3 px-3" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-navy rounded-3 px-4">Salvar Alterações</button>
                     </div>
                 </div>
             </form>
@@ -716,115 +809,170 @@ $total_edicoes = count($edicoes);
     </div>
 </div>
 
-<!-- MODAIS AUXILIARES -->
+<!-- CARD DE CONFIRMAÇÃO DE EXCLUSÃO DO ACAMPAMENTO -->
+<div class="modal fade" id="modalConfirmarExcluirAcampamento" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 overflow-hidden shadow-lg">
+            <div class="modal-header bg-danger text-white p-4">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Excluir Acampamento
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <i class="bi bi-trash3 text-danger display-3 d-block mb-3"></i>
+                <h5 class="fw-bold text-dark">Tem certeza absoluta?</h5>
+                <p class="text-secondary mb-0">
+                    Você está prestes a excluir o acampamento <strong><?= htmlspecialchars($nome) ?></strong>. Esta ação é irreversível e removerá todas as edições e registros vinculados a ele.
+                </p>
+            </div>
+            <div class="modal-footer bg-light p-3 border-top justify-content-center gap-2">
+                <button type="button" class="btn btn-outline-secondary rounded-3 px-4" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger rounded-3 px-4 fw-semibold" onclick="document.getElementById('formExcluirAcampamento').submit();">
+                    Sim, Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CONFIRMAR STATUS -->
 <div class="modal fade" id="modalConfirmarStatus" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
+        <div class="modal-content border-0 rounded-4 overflow-hidden shadow-lg">
+            <div class="modal-header modal-header-custom p-4">
                 <h5 class="modal-title fw-bold" id="statusModalTitle">Confirmar Alteração</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form action="" method="POST">
                 <input type="hidden" name="acao_toggle_status_edicao" value="1">
                 <input type="hidden" name="edicao_id" id="status_edicao_id">
                 <input type="hidden" name="novo_status" id="status_novo_val">
                 
-                <div class="modal-body">
-                    <p class="m-0 text-secondary" id="statusModalMessage"></p>
+                <div class="modal-body p-4">
+                    <p class="m-0 text-dark fs-6" id="statusModalMessage"></p>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light rounded-3 fw-medium" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-dark rounded-3 px-4 fw-medium" id="statusModalSubmitBtn">Confirmar</button>
+                <div class="modal-footer bg-light p-3 border-top">
+                    <button type="button" class="btn btn-outline-secondary rounded-3 px-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-navy rounded-3 px-4" id="statusModalSubmitBtn">Confirmar</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
+<!-- MODAL CRIAR EDIÇÃO -->
 <div class="modal fade" id="modalNovaEdicao" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold">Criar Nova Edição</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0 rounded-4 overflow-hidden shadow-lg">
+            <div class="modal-header modal-header-custom p-4">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2">
+                    <i class="bi bi-plus-circle-fill text-warning"></i> Criar Nova Edição
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form action="" method="POST">
                 <input type="hidden" name="acao_criar_edicao" value="1">
-                <div class="modal-body">
+                <div class="modal-body p-4">
                     <div class="mb-3">
-                        <label class="form-label small fw-medium text-secondary">Nome da Edição</label>
-                        <input type="text" name="nome_edicao" class="form-control" placeholder="Ex: <?= ($total_edicoes + 1) ?>° <?= htmlspecialchars($nome) ?>" value="<?= ($total_edicoes + 1) ?>° <?= htmlspecialchars($nome) ?>" required>
+                        <label class="form-label small fw-medium text-dark">Nome da Edição *</label>
+                        <input type="text" name="nome_edicao" class="form-control rounded-3" placeholder="Ex: <?= ($total_edicoes + 1) ?>° <?= htmlspecialchars($nome) ?>" value="<?= ($total_edicoes + 1) ?>° <?= htmlspecialchars($nome) ?>" required>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-medium text-secondary">Ano de Realização</label>
-                        <input type="number" name="ano_edicao" class="form-control" value="<?= date('Y') ?>" min="2000" max="2100" required>
+                        <label class="form-label small fw-medium text-dark">Ano de Realização *</label>
+                        <input type="number" name="ano_edicao" class="form-control rounded-3" value="<?= date('Y') ?>" min="2000" max="2100" required>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light rounded-3 fw-medium" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-dark rounded-3 px-4 fw-medium">Criar Edição</button>
+                <div class="modal-footer bg-light p-3 border-top">
+                    <button type="button" class="btn btn-outline-secondary rounded-3 px-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-navy rounded-3 px-4">Criar Edição</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
+<!-- MODAL EDITAR EDIÇÃO -->
 <div class="modal fade" id="modalEditarEdicao" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold">Editar Edição</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0 rounded-4 overflow-hidden shadow-lg">
+            <div class="modal-header modal-header-custom p-4">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2">
+                    <i class="bi bi-pencil-square text-warning"></i> Editar Edição
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form action="" method="POST">
                 <input type="hidden" name="acao_editar_edicao" value="1">
                 <input type="hidden" name="edicao_id" id="edit_edicao_id">
                 
-                <div class="modal-body">
+                <div class="modal-body p-4">
                     <div class="mb-3">
-                        <label class="form-label small fw-medium text-secondary">Edição</label>
-                        <input type="text" name="nome" id="edit_edicao_nome" class="form-control" required>
+                        <label class="form-label small fw-medium text-dark">Nome da Edição *</label>
+                        <input type="text" name="nome" id="edit_edicao_nome" class="form-control rounded-3" required>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-medium text-secondary">Ano de Realização</label>
-                        <input type="number" name="ano" id="edit_edicao_ano" class="form-control" min="2000" max="2100" required>
+                        <label class="form-label small fw-medium text-dark">Ano de Realização *</label>
+                        <input type="number" name="ano" id="edit_edicao_ano" class="form-control rounded-3" min="2000" max="2100" required>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light rounded-3 fw-medium" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-dark rounded-3 px-4 fw-medium">Salvar Alterações</button>
+                <div class="modal-footer bg-light p-3 border-top">
+                    <button type="button" class="btn btn-outline-secondary rounded-3 px-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-navy rounded-3 px-4">Salvar Alterações</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
+<!-- MODAL EXCLUIR EDIÇÃO -->
 <div class="modal fade" id="modalExcluirEdicao" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Excluir Edição</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0 rounded-4 overflow-hidden shadow-lg">
+            <div class="modal-header bg-danger text-white p-4">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Excluir Edição
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form action="" method="POST">
                 <input type="hidden" name="acao_excluir_edicao" value="1">
                 <input type="hidden" name="edicao_id" id="delete_edicao_id">
                 
-                <div class="modal-body">
-                    <p class="m-0 text-secondary">Tem certeza que deseja excluir permanentemente a <strong id="delete_edicao_titulo" class="text-dark"></strong>?</p>
+                <div class="modal-body p-4">
+                    <p class="m-0 text-dark fs-6">Tem certeza que deseja excluir permanentemente a <strong id="delete_edicao_titulo"></strong>?</p>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light rounded-3 fw-medium" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-danger rounded-3 px-4 fw-medium">Excluir</button>
+                <div class="modal-footer bg-light p-3 border-top">
+                    <button type="button" class="btn btn-outline-secondary rounded-3 px-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger rounded-3 px-4">Excluir</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- FORMULÁRIO OCULTO PARA EXCLUSÃO DO ACAMPAMENTO -->
+<!-- MODAL LOGOUT -->
+<div class="modal fade" id="modalConfirmarLogout" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 rounded-4 overflow-hidden shadow-lg text-center">
+            <div class="modal-header modal-header-custom p-3 justify-content-center">
+                <h5 class="modal-title fw-bold fs-6 m-0 text-white d-flex align-items-center gap-2">
+                    <i class="bi bi-box-arrow-right text-warning fs-5"></i> Confirmar Saída
+                </h5>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-secondary mb-0">Deseja realmente encerrar sua sessão e sair do sistema?</p>
+            </div>
+            <div class="modal-footer bg-light p-3 border-top justify-content-center gap-2">
+                <button type="button" class="btn btn-outline-secondary rounded-3 px-3 btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <a href="logout.php" class="btn btn-danger rounded-3 px-3 btn-sm fw-semibold">Sair do Sistema</a>
+            </div>
+        </div>
+    </div>
+</div>
+
 <form id="formExcluirAcampamento" action="" method="POST" style="display: none;">
     <input type="hidden" name="acao_excluir_modalidade" value="1">
 </form>
@@ -833,17 +981,9 @@ $total_edicoes = count($edicoes);
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
 <script>
-function confirmarExclusaoAcampamento() {
-    if (confirm("Tem certeza que deseja excluir permanentemente este acampamento? Esta ação não poderá ser desfeita.")) {
-        document.getElementById('formExcluirAcampamento').submit();
-    }
-}
-
 let cropperEdit = null;
 
 document.addEventListener('DOMContentLoaded', function () {
-
-    // Cropper.js no Modal de Editar Informações
     const inputEdit = document.getElementById('inputLogoAcampamentoEdit');
     if (inputEdit) {
         inputEdit.addEventListener('change', function (e) {
@@ -865,7 +1005,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
 
                     cropperEdit = new Cropper(image, {
-                        aspectRatio: 4 / 3,
+                        aspectRatio: 1,
                         viewMode: 1,
                         background: false,
                         autoCropArea: 0.9,
@@ -884,8 +1024,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 e.preventDefault();
                 
                 const canvas = cropperEdit.getCroppedCanvas({
-                    width: 600,
-                    height: 450
+                    width: 400,
+                    height: 400
                 });
 
                 document.getElementById('logoCroppedBase64Edit').value = canvas.toDataURL('image/png');
@@ -894,7 +1034,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Handlers dos modais
     const modalConfirmarStatus = document.getElementById('modalConfirmarStatus');
     if (modalConfirmarStatus) {
         modalConfirmarStatus.addEventListener('show.bs.modal', function (event) {
@@ -911,11 +1050,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (status === 'inativar') {
                 modalTitle.textContent = 'Inativar Edição';
-                modalTitle.className = 'modal-title fw-bold text-dark';
                 modalMsg.innerHTML = `Tem certeza que deseja marcar a <strong>${titulo}</strong> como <strong>Inativa</strong>?`;
             } else {
                 modalTitle.textContent = 'Ativar Edição';
-                modalTitle.className = 'modal-title fw-bold text-dark';
                 modalMsg.innerHTML = `Tem certeza que deseja marcar a <strong>${titulo}</strong> como <strong>Ativa</strong>?`;
             }
         });

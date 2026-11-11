@@ -16,9 +16,6 @@ if (!isset($_SESSION['usuario_id'])) {
     exit;
 }
 
-// Caminho para a imagem da sua Logo
-$caminho_logo = 'assets/img/logo.png'; 
-
 // 2. Captura o ID da edição (aceita edicao_id ou id na URL)
 $edicao_id = 0;
 if (isset($_GET['edicao_id']) && intval($_GET['edicao_id']) > 0) {
@@ -32,9 +29,9 @@ if ($edicao_id <= 0) {
     exit;
 }
 
-// 3. Busca os dados da Edição e da Modalidade
+// 3. Busca os dados da Edição e da Modalidade (incluindo logo e lema)
 $stmt_ed = $conn->prepare("
-    SELECT e.*, m.nome AS modalidade_nome, m.cor
+    SELECT e.*, m.nome AS modalidade_nome, m.cor, m.logo, m.lema
     FROM edicoes e
     INNER JOIN modalidades m ON e.modalidade_id = m.id
     WHERE e.id = ?
@@ -54,11 +51,11 @@ if (!$edicao) {
 }
 
 // 4. Valida permissões do usuário
-$perfil          = $_SESSION['usuario_perfil'] ?? '';
-$permitidos      = $_SESSION['modalidades_permitidas'] ?? [];
-$nome_usuario    = $_SESSION['usuario_nome'] ?? 'Valéria Guimarães';
+$perfil       = strtoupper(trim($_SESSION['usuario_perfil'] ?? ''));
+$permitidos   = $_SESSION['modalidades_permitidas'] ?? [];
+$nome_usuario = $_SESSION['usuario_nome'] ?? 'Usuário';
 
-if ($perfil !== 'COORDENADORA_GERAL' && !in_array($edicao['modalidade_id'], $permitidos)) {
+if ($perfil !== 'COORDENADORA_GERAL' && $perfil !== 'COORDENADOR_GERAL' && !in_array($edicao['modalidade_id'], $permitidos)) {
     header("Location: dashboard-geral.php?erro=sem_permissao");
     exit;
 }
@@ -71,7 +68,29 @@ $anoEdicao      = intval($edicao['ano'] ?? date('Y'));
 $statusEdicao   = strtolower($edicao['status'] ?? 'inativa');
 $isAtiva        = ($statusEdicao === 'ativa');
 $is_inativa     = !$isAtiva;
-$cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#292524';
+$cor            = !empty($edicao['cor']) ? $edicao['cor'] : '#C5A059';
+
+// Trata a imagem da Logo do Acampamento
+$nomeLimpo = mb_strtolower(trim($nomeModalidade), 'UTF-8');
+$nomeLimpo = preg_replace('/[áàãâä]/u', 'a', $nomeLimpo);
+$nomeLimpo = preg_replace('/[éèêë]/u', 'e', $nomeLimpo);
+$nomeLimpo = preg_replace('/[íìîï]/u', 'i', $nomeLimpo);
+$nomeLimpo = preg_replace('/[óòõôö]/u', 'o', $nomeLimpo);
+$nomeLimpo = preg_replace('/[úùûü]/u', 'u', $nomeLimpo);
+
+$extensoes = ['png', 'jpg', 'jpeg', 'webp'];
+$caminhoLogo = null;
+
+if (!empty($edicao['logo']) && file_exists($edicao['logo'])) {
+    $caminhoLogo = $edicao['logo'];
+} else {
+    foreach ($extensoes as $e) {
+        if (file_exists('uploads/logos/' . $nomeLimpo . '.' . $e)) {
+            $caminhoLogo = 'uploads/logos/' . $nomeLimpo . '.' . $e;
+            break;
+        }
+    }
+}
 
 // 5. BLOQUEIO DE SEGURANÇA NO BACKEND (PHP)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_inativa) {
@@ -91,143 +110,170 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_inativa) {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
         :root {
-            --cor-modalidade: <?= $cor ?>;
-            --nav-bg: #0d1b2a;
-            --nav-yellow: #e5b338;
-            --nav-red: #e63946;
+            --navy-dark: #0A192F;
+            --navy-light: #1E293B;
+            --gold-primary: #C5A059;
+            --gold-hover: #B28D46;
+            --bg-main: #F8FAFC;
+            --border-color: #E2E8F0;
+            --text-primary: #0F172A;
+            --text-muted: #64748B;
         }
 
         body { 
-            font-family: 'Outfit', sans-serif; 
-            background-color: #fcfbf9; 
-            color: #1c1917; 
-            margin: 0; 
-            padding: 0; 
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif; 
+            background-color: var(--bg-main); 
+            color: var(--text-primary); 
+            min-height: 100vh;
         }
 
-        /* Estilização da Navbar */
-        .navbar-custom {
-            background-color: var(--nav-bg);
-            padding: 0.85rem 2rem;
-            color: #ffffff;
+        /* Top Navbar Padronizada */
+        .top-navbar {
+            background-color: var(--navy-dark);
+            border-bottom: 2px solid var(--gold-primary);
+            padding: 0.75rem 1.25rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(10, 25, 47, 0.15);
         }
 
-        .user-profile-container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
+        .user-brand-block {
+            min-width: 0;
         }
 
-        /* Container da Logo */
-        .logo-box {
-            width: 48px;
-            height: 48px;
-            border: 1.5px solid var(--nav-yellow);
-            border-radius: 12px;
+        .brand-icon {
+            width: 42px;
+            height: 42px;
+            min-width: 42px;
+            background-color: #ffffff;
+            border: 2px solid var(--gold-primary);
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
-            background-color: rgba(255, 255, 255, 0.05);
-            flex-shrink: 0;
+            padding: 2px;
         }
 
-        .logo-box img {
-            max-width: 100%;
-            max-height: 100%;
+        .brand-icon img {
+            width: 100%;
+            height: 100%;
             object-fit: contain;
-            padding: 4px;
+            border-radius: 50%;
         }
 
-        .user-info-text .user-name {
-            font-weight: 700;
-            font-size: 1.05rem;
-            color: #ffffff;
+        .user-info-text {
             line-height: 1.2;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
-        .user-info-text .user-role {
-            font-size: 0.78rem;
-            color: #94a3b8;
-            letter-spacing: 0.5px;
-            font-weight: 500;
-        }
-
-        /* Botão de Sair */
-        .btn-nav-outline-red {
-            background-color: transparent;
+        .btn-outline-danger-custom {
+            border: 1px solid rgba(239, 68, 68, 0.5);
             color: #f87171;
-            border: 1px solid var(--nav-red);
-            font-weight: 600;
-            border-radius: 10px;
-            padding: 0.45rem 1.1rem;
-            font-size: 0.9rem;
+            background: transparent;
             transition: all 0.2s ease;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
         }
 
-        .btn-nav-outline-red:hover {
-            background-color: rgba(230, 57, 70, 0.1);
-            color: #f87171;
+        .btn-outline-danger-custom:hover {
+            background-color: #ef4444;
+            color: #ffffff;
         }
 
         /* Conteúdo Principal */
         .main-content { 
-            padding: 32px 48px; 
+            padding: 2rem 1.25rem; 
             width: 100%; 
-            max-width: 1400px; 
+            max-width: 1300px; 
             margin: 0 auto; 
             box-sizing: border-box;
         }
 
+        /* Card Cabeçalho da Edição */
+        .card-header-edicao {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 1.25rem 1.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+        }
+
+        .logo-acampamento-circle {
+            width: 54px;
+            height: 54px;
+            min-width: 54px;
+            border-radius: 50%;
+            background-color: #ffffff;
+            border: 2px solid var(--gold-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 3px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .logo-acampamento-circle img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 50%;
+        }
+
+        /* Modulos Grid */
         .modulos-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 20px;
-            margin-top: 24px;
+            gap: 1.25rem;
+            margin-top: 1rem;
         }
 
         .card-modulo {
             background: #ffffff;
-            border: 1px solid #e7e5e4;
-            border-radius: 16px;
-            padding: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            padding: 1.25rem;
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 1rem;
             text-decoration: none;
-            color: #1c1917;
-            transition: all 0.2s ease-in-out;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+            color: var(--text-primary);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
         }
 
         .card-modulo:hover {
-            border-color: var(--cor-modalidade);
-            box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+            border-color: var(--gold-primary);
+            box-shadow: 0 8px 20px rgba(10, 25, 47, 0.08);
             transform: translateY(-3px);
-            color: var(--cor-modalidade);
+            color: var(--navy-dark);
         }
 
         .card-modulo-icon {
             width: 48px;
             height: 48px;
-            border-radius: 12px;
-            background-color: #f5f5f4;
+            border-radius: 14px;
+            background-color: #F1F5F9;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.4rem;
-            color: #44403c;
+            font-size: 1.35rem;
+            color: var(--navy-dark);
             flex-shrink: 0;
-            transition: all 0.2s ease;
+            transition: all 0.25s ease;
         }
 
         .card-modulo:hover .card-modulo-icon {
-            background-color: var(--cor-modalidade);
+            background-color: var(--navy-dark);
+            color: var(--gold-primary);
+        }
+
+        .modal-header-custom {
+            background-color: var(--navy-dark);
             color: #ffffff;
+            border-bottom: 2px solid var(--gold-primary);
         }
 
         .banner-inativa {
@@ -236,44 +282,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_inativa) {
             color: #475569;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 576px) {
+            .top-navbar {
+                padding: 0.65rem 0.85rem;
+            }
+
             .main-content {
-                padding: 16px;
+                padding: 1.25rem 0.85rem;
             }
-            .navbar-custom {
-                padding: 0.85rem 1rem;
-            }
+
             .modulos-grid {
                 grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-                gap: 12px;
+                gap: 0.85rem;
             }
         }
     </style>
 </head>
 <body>
 
-<!-- NAVBAR (SEM OS BOTÕES DE INSERIR E ACESSOS) -->
-<nav class="navbar navbar-expand-lg navbar-custom sticky-top">
-    <div class="container-fluid p-0">
-        
-        <!-- LADO ESQUERDO: LOGO DO PROJETO + PERFIL DO USUÁRIO -->
-        <div class="user-profile-container">
-            <div class="logo-box">
-                <img src="./uploads/logos/logoefata.png" alt="Logo do Projeto" onerror="this.onerror=null; this.src='https://via.placeholder.com/48?text=LOGO';">
-            </div>
-            <div class="user-info-text">
-                <div class="user-name"><?= htmlspecialchars($nome_usuario) ?></div>
-                <div class="user-role"><?= htmlspecialchars($perfil) ?></div>
-            </div>
+<!-- NAVBAR PADRONIZADA -->
+<nav class="top-navbar d-flex align-items-center justify-content-between gap-2">
+    <div class="d-flex align-items-center gap-2 gap-sm-3 user-brand-block">
+        <div class="brand-icon shadow-sm">
+            <img src="./uploads/logos/logoefata.png" alt="Logo Éfata" onerror="this.onerror=null; this.src='assets/img/logo.png';">
         </div>
-
-        <!-- LADO DIREITO: SOMENTE BOTÃO SAIR -->
-        <div class="d-flex align-items-center gap-2 ms-auto">
-            <a href="logout.php" class="btn-nav-outline-red">
-                <i class="bi bi-box-arrow-right"></i> Sair
-            </a>
+        <div class="user-info-text">
+            <h6 class="fw-bold m-0 text-white text-truncate" style="font-size: 0.92rem;"><?= htmlspecialchars($nome_usuario) ?></h6>
+            <small class="text-light opacity-75 d-block text-truncate" style="font-size: 0.72rem;"><?= htmlspecialchars($perfil) ?></small>
         </div>
+    </div>
 
+    <div class="d-flex align-items-center gap-2 nav-actions">
+        <button class="btn btn-outline-danger-custom btn-sm rounded-3 px-2 px-sm-3 py-2 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalConfirmarLogout" title="Sair">
+            <i class="bi bi-box-arrow-right"></i>
+            <span class="d-none d-md-inline">Sair</span>
+        </button>
     </div>
 </nav>
 
@@ -281,7 +324,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_inativa) {
 
     <!-- ALERTAS DE SESSÃO -->
     <?php if (isset($_SESSION['mensagem_erro'])): ?>
-        <div class="alert alert-danger alert-dismissible fade show rounded-3 mb-4" role="alert">
+        <div class="alert alert-danger alert-dismissible fade show rounded-4 border-0 shadow-sm mb-4" role="alert">
             <i class="bi bi-exclamation-triangle-fill me-2"></i>
             <?= htmlspecialchars($_SESSION['mensagem_erro']) ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -300,15 +343,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_inativa) {
         </div>
     <?php endif; ?>
 
-    <!-- CABEÇALHO DA EDIÇÃO -->
-    <div class="bg-white p-4 rounded-4 border mb-4 shadow-sm d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3" style="border-color: #e7e5e4 !important;">
+    <!-- CABEÇALHO DA EDIÇÃO COM LOGO E BOTÃO VOLTAR -->
+    <div class="card-header-edicao mb-4 d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
         <div class="d-flex align-items-center gap-3">
-            <a href="dashboard-acampamento.php?modalidade_id=<?= $modalidade_id ?>" class="btn btn-light btn-sm rounded-3 d-flex align-items-center gap-2 border text-secondary">
-                <i class="bi bi-arrow-left"></i> Voltar
+            <a href="dashboard-acampamento.php?modalidade_id=<?= $modalidade_id ?>" class="btn text-dark border-0 p-0 fs-4 d-flex align-items-center justify-content-center me-1" title="Voltar ao Acampamento">
+                <i class="bi bi-arrow-left"></i>
             </a>
 
+            <!-- LOGO DO ACAMPAMENTO -->
+            <div class="logo-acampamento-circle">
+                <?php if ($caminhoLogo): ?>
+                    <img src="<?= $caminhoLogo ?>?v=<?= time() ?>" alt="Logo <?= $nomeModalidade ?>">
+                <?php else: ?>
+                    <i class="bi bi-shield-check fs-3 text-warning"></i>
+                <?php endif; ?>
+            </div>
+
             <div>
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
                     <h3 class="fw-bold m-0 text-dark"><?= $nomeModalidade ?> - <?= $nomeEdicao ?> (<?= $anoEdicao ?>)</h3>
                     <?php if ($isAtiva): ?>
                         <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 small">Ativa</span>
@@ -316,13 +368,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_inativa) {
                         <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2.5 py-1 small">Inativa</span>
                     <?php endif; ?>
                 </div>
-                <span class="text-muted small">Gerencie todos os recursos e conteúdos desta edição</span>
             </div>
         </div>
     </div>
-
-    <!-- TÍTULO DA SEÇÃO -->
-    <h5 class="fw-bold text-dark mb-3">Módulos de Gestão</h5>
 
     <!-- GRID DE CARDS INTERNOS DA EDIÇÃO -->
     <div class="modulos-grid">
@@ -345,11 +393,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_inativa) {
             </div>
             <div>
                 <h6 class="fw-bold m-0">Equipes-Campistas</h6>
-                <span class="text-muted small">Campistas e tribos/equipes</span>
+                <span class="text-muted small">Divisão dos campistas</span>
             </div>
         </a>
 
-        <!-- 3. Histórico Geral (NOVO CARD) -->
+        <!-- 3. Histórico Geral -->
         <a href="historico-campistas.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-journal-bookmark-fill"></i>
@@ -377,8 +425,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_inativa) {
                 <i class="bi bi-heart-pulse-fill"></i>
             </div>
             <div>
-                <h6 class="fw-bold m-0">Espiritualidade</h6>
-                <span class="text-muted small">Oração, capela e momentos</span>
+                <h6 class="fw-bold m-0">Espiritualidades</h6>
+                <span class="text-muted small">Preparação e vivência</span>
             </div>
         </a>
 
@@ -404,7 +452,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_inativa) {
             </div>
         </a>
 
-        <!-- 8. Lista de Compras -->
+        <!-- 8. Contas -->
         <a href="contas.php?edicao_id=<?= $edicao_id ?>&modalidade_id=<?= $modalidade_id ?>" class="card-modulo">
             <div class="card-modulo-icon">
                 <i class="bi bi-cart-check"></i>
@@ -455,7 +503,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_inativa) {
             </div>
             <div>
                 <h6 class="fw-bold m-0">Pasta dos Desafios</h6>
-                <span class="text-muted small">Desafios- comunidades</span>
+                <span class="text-muted small">Desafios</span>
             </div>
         </a>
 
@@ -463,25 +511,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_inativa) {
 
 </main>
 
+<!-- MODAL LOGOUT -->
+<div class="modal fade" id="modalConfirmarLogout" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 rounded-4 overflow-hidden shadow-lg text-center">
+            <div class="modal-header modal-header-custom p-3 justify-content-center">
+                <h5 class="modal-title fw-bold fs-6 m-0 text-white d-flex align-items-center gap-2">
+                    <i class="bi bi-box-arrow-right text-warning fs-5"></i> Confirmar Saída
+                </h5>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-secondary mb-0">Deseja realmente encerrar sua sessão e sair do sistema?</p>
+            </div>
+            <div class="modal-footer bg-light p-3 border-top justify-content-center gap-2">
+                <button type="button" class="btn btn-outline-secondary rounded-3 px-3 btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <a href="logout.php" class="btn btn-danger rounded-3 px-3 btn-sm fw-semibold">Sair do Sistema</a>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <!-- BLOQUEIO VIA JAVASCRIPT SE A EDIÇÃO FOR INATIVA -->
 <?php if ($is_inativa): ?>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // 1. Desativa todos os campos de formulário e botões de ação/salvamento
     const elementosControle = document.querySelectorAll('form input, form select, form textarea, form button, button[type="submit"]');
     elementosControle.forEach(el => {
         el.disabled = true;
     });
 
-    // 2. Oculta botões de adicionar, editar ou excluir dinâmicos
     const botoesAcao = document.querySelectorAll('.btn-salvar, .btn-editar, .btn-excluir, .btn-adicionar');
     botoesAcao.forEach(el => {
         el.style.display = 'none';
     });
 
-    // 3. Intercepta envios de formulário via JS
     document.querySelectorAll('form').forEach(form => {
         form.addEventListener('submit', function (e) {
             e.preventDefault();

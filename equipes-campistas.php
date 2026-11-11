@@ -17,8 +17,8 @@ if (!isset($_SESSION['usuario_id'])) {
 }
 
 $caminho_logo  = 'assets/img/logo.png';
-$nome_usuario  = $_SESSION['usuario_nome'] ?? 'Valéria Guimarães';
-$perfil        = $_SESSION['usuario_perfil'] ?? '';
+$nome_usuario  = $_SESSION['usuario_nome'] ?? $_SESSION['nome'] ?? 'Valéria Guimarães';
+$perfil        = strtoupper(trim($_SESSION['usuario_perfil'] ?? $_SESSION['perfil'] ?? 'COORDENADORA_GERAL'));
 
 // 2. Captura o ID da edição
 $edicao_id = 0;
@@ -314,19 +314,87 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
     <style>
         :root {
             --cor-modalidade: <?= $cor ?>;
-            --nav-bg: #0d1b2a;
-            --nav-yellow: #e5b338;
-            --nav-red: #e63946;
+            --navy-dark: #0A192F;
+            --gold-primary: #C5A059;
+            --gold-hover: #B28D46;
+            --bg-main: #F8FAFC;
+            --border-color: #E2E8F0;
+            --text-primary: #0F172A;
+            --text-muted: #64748B;
         }
 
-        body { font-family: 'Outfit', sans-serif; background-color: #fcfbf9; color: #1c1917; margin: 0; padding: 0; }
-        .navbar-custom { background-color: var(--nav-bg); padding: 0.85rem 2rem; color: #ffffff; }
-        .user-profile-container { display: flex; align-items: center; gap: 12px; }
-        .logo-box { width: 48px; height: 48px; border: 1.5px solid var(--nav-yellow); border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; background-color: rgba(255, 255, 255, 0.05); flex-shrink: 0; }
-        .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; padding: 4px; }
-        .user-info-text .user-name { font-weight: 700; font-size: 1.05rem; color: #ffffff; line-height: 1.2; }
-        .user-info-text .user-role { font-size: 0.78rem; color: #94a3b8; letter-spacing: 0.5px; font-weight: 500; }
-        .btn-nav-outline-red { background-color: transparent; color: #f87171; border: 1px solid var(--nav-red); font-weight: 600; border-radius: 10px; padding: 0.45rem 1.1rem; font-size: 0.9rem; transition: all 0.2s ease; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+        body { font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif; background-color: var(--bg-main); color: var(--text-primary); margin: 0; padding: 0; }
+        
+        /* Top Navbar Padronizada */
+        .top-navbar {
+            background-color: var(--navy-dark);
+            border-bottom: 2px solid var(--gold-primary);
+            padding: 0.75rem 1.25rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(10, 25, 47, 0.15);
+        }
+
+        .user-brand-block {
+            min-width: 0;
+        }
+
+        .brand-icon {
+            width: 42px;
+            height: 42px;
+            min-width: 42px;
+            background-color: #ffffff;
+            border: 2px solid var(--gold-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 2px;
+        }
+
+        .brand-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 50%;
+        }
+
+        .user-info-text {
+            line-height: 1.2;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .btn-outline-danger-custom {
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #f87171;
+            background: transparent;
+            transition: all 0.2s ease;
+        }
+
+        .btn-outline-danger-custom:hover {
+            background-color: #ef4444;
+            color: #ffffff;
+        }
+
+        /* Botão Mover Campista em Dourado */
+        .btn-outline-gold {
+            border: 1px solid var(--gold-primary);
+            color: var(--gold-primary);
+            background: transparent;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-outline-gold:hover {
+            background-color: var(--gold-primary);
+            color: #ffffff;
+            border-color: var(--gold-primary);
+            box-shadow: 0 4px 12px rgba(197, 160, 89, 0.25);
+        }
 
         .main-content { padding: 32px 48px; width: 100%; max-width: 1400px; margin: 0 auto; box-sizing: border-box; }
         .equipe-card { background: #ffffff; border: 1.5px solid #000000; border-radius: 0px; padding: 0; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
@@ -352,8 +420,31 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
         .ts-dropdown { border-radius: 12px !important; border: 1px solid #e2e8f0 !important; box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important; margin-top: 4px !important; }
         .ts-dropdown .option { padding: 10px 14px !important; font-size: 0.95rem !important; }
 
+        .modal-header-custom {
+            background-color: var(--navy-dark);
+            color: #ffffff;
+            border-bottom: 2px solid var(--gold-primary);
+        }
+
+        /* Ícone simples de voltar */
+        .btn-only-arrow {
+            color: #475569;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: color 0.2s ease, background-color 0.2s ease;
+        }
+
+        .btn-only-arrow:hover {
+            color: var(--navy-dark);
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
         @media print {
-            .navbar-custom, .no-print, .btn, .equipe-header-btns, .item-row-actions { display: none !important; }
+            .top-navbar, .no-print, .btn, .equipe-header-btns, .item-row-actions { display: none !important; }
             body { background-color: #ffffff !important; }
             .main-content { padding: 0 !important; max-width: 100% !important; margin: 0 !important; }
             .equipe-col { width: 100% !important; page-break-after: always !important; }
@@ -363,24 +454,23 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
 </head>
 <body>
 
-<!-- NAVBAR -->
-<nav class="navbar navbar-expand-lg navbar-custom sticky-top no-print">
-    <div class="container-fluid p-0">
-        <div class="user-profile-container">
-            <div class="logo-box">
-                <img src="<?= $caminho_logo ?>" alt="Logo" onerror="this.onerror=null; this.src='https://via.placeholder.com/48?text=LOGO';">
-            </div>
-            <div class="user-info-text">
-                <div class="user-name"><?= htmlspecialchars($nome_usuario) ?></div>
-                <div class="user-role"><?= htmlspecialchars($perfil) ?></div>
-            </div>
+<!-- NAVBAR PADRONIZADA -->
+<nav class="top-navbar d-flex align-items-center justify-content-between gap-2 no-print">
+    <div class="d-flex align-items-center gap-2 gap-sm-3 user-brand-block">
+        <div class="brand-icon shadow-sm">
+            <img src="./uploads/logos/logoefata.png" alt="Logo Éfata" onerror="this.onerror=null; this.src='assets/img/logo.png';">
         </div>
+        <div class="user-info-text">
+            <h6 class="fw-bold m-0 text-white text-truncate" style="font-size: 0.92rem;"><?= htmlspecialchars($nome_usuario) ?></h6>
+            <small class="text-light opacity-75 d-block text-truncate" style="font-size: 0.72rem;"><?= htmlspecialchars($perfil) ?></small>
+        </div>
+    </div>
 
-        <div class="d-flex align-items-center gap-2 ms-auto">
-            <a href="logout.php" class="btn-nav-outline-red">
-                <i class="bi bi-box-arrow-right"></i> Sair
-            </a>
-        </div>
+    <div class="d-flex align-items-center gap-2 nav-actions">
+        <button class="btn btn-outline-danger-custom btn-sm rounded-3 px-2 px-sm-3 py-2 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalConfirmarLogout" title="Sair">
+            <i class="bi bi-box-arrow-right"></i>
+            <span class="d-none d-md-inline">Sair</span>
+        </button>
     </div>
 </nav>
 
@@ -388,26 +478,27 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
 
     <!-- CABEÇALHO DA PÁGINA -->
     <div class="bg-white p-4 rounded-4 border mb-4 shadow-sm d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 no-print">
-        <div class="d-flex align-items-center gap-3">
-            <a href="edicao-detalhes.php?edicao_id=<?= $edicao_id ?>" class="btn btn-light btn-sm rounded-3 d-flex align-items-center gap-2 border text-secondary">
-                <i class="bi bi-arrow-left"></i> Voltar
+        <div class="d-flex align-items-center gap-2">
+            <a href="edicao-detalhes.php?edicao_id=<?= $edicao_id ?>" class="btn-only-arrow me-1" title="Voltar">
+                <i class="bi bi-arrow-left fs-4"></i>
             </a>
 
             <div>
-                <h3 class="fw-bold m-0 text-dark">Equipas e Campistas</h3>
+                <h3 class="fw-bold m-0 text-dark">Equipes e Campistas</h3>
                 <span class="text-muted small"><?= $nomeModalidade ?> - <?= $nomeEdicao ?> (<?= $anoEdicao ?>)</span>
             </div>
         </div>
 
         <div class="d-flex gap-2 flex-wrap">
-            <button class="btn btn-outline-primary btn-sm rounded-3 px-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalTrocarEquipe">
+            <!-- BOTÃO MOVER CAMPISTA EM DOURADO -->
+            <button class="btn btn-outline-gold btn-sm rounded-3 px-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalTrocarEquipe">
                 <i class="bi bi-arrow-left-right"></i> Mover Campista
             </button>
             <button onclick="window.print()" class="btn btn-outline-dark btn-sm rounded-3 px-3 d-flex align-items-center gap-2">
                 <i class="bi bi-printer"></i> Imprimir
             </button>
             <button class="btn btn-dark btn-sm rounded-3 px-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalCriarEquipe">
-                <i class="bi bi-plus-lg"></i> Nova Equipa
+                <i class="bi bi-plus-lg"></i> Nova Equipe
             </button>
         </div>
     </div>
@@ -502,7 +593,7 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
             </div>
             <div class="modal-body p-4">
                 <div class="mb-3">
-                    <label class="form-label fw-bold small">Cargo / Nomeação</label>
+                    <label class="form-label fw-bold small">Nomeação</label>
                     <input type="text" name="cargo" id="edt_lider_cargo" class="form-control" required>
                 </div>
                 <div class="mb-3">
@@ -626,7 +717,7 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
             </div>
             <div class="modal-body p-4">
                 <div class="mb-3">
-                    <label class="form-label fw-bold small">Nome da Equipa</label>
+                    <label class="form-label fw-bold small">Nome da Equipe</label>
                     <input type="text" name="nome_equipe" id="edt_nome_equipe" class="form-control" required>
                 </div>
                 <div class="mb-3">
@@ -648,7 +739,7 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
             <input type="hidden" name="acao" value="excluir_equipe">
             <input type="hidden" name="equipe_id" id="exc_equipe_id" value="">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold text-danger">Excluir Equipa</h5>
+                <h5 class="modal-title fw-bold text-danger">Excluir Equipe</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4 text-center">
@@ -667,12 +758,12 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
         <form method="POST" class="modal-content border-0 rounded-4 shadow">
             <input type="hidden" name="acao" value="criar_equipe">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Nova Equipa</h5>
+                <h5 class="modal-title fw-bold">Nova Equipe</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
                 <div class="mb-3">
-                    <label class="form-label fw-bold small">Nome da Equipa</label>
+                    <label class="form-label fw-bold small">Nome da Equipe</label>
                     <input type="text" name="nome_equipe" class="form-control" placeholder="Ex: COMUNIDADE PIEDADE - COR BRANCA" required>
                 </div>
                 <div class="mb-3">
@@ -721,7 +812,7 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
         <form method="POST" class="modal-content border-0 rounded-4 shadow">
             <input type="hidden" name="acao" value="trocar_equipe_campista">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Mover Campista de Equipa</h5>
+                <h5 class="modal-title fw-bold">Mover Campista de Equipe</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
@@ -735,7 +826,7 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
                     </select>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label fw-bold small">Nova Equipa de Destino</label>
+                    <label class="form-label fw-bold small">Nova equipe</label>
                     <select name="nova_equipe_id" class="form-select" required>
                         <option value="">Selecione...</option>
                         <?php foreach ($equipes as $eq_dest): ?>
@@ -749,6 +840,26 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
                 <button type="submit" class="btn btn-primary rounded-3 px-4">Mover Campista</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- MODAL CONFIRMAR LOGOUT -->
+<div class="modal fade no-print" id="modalConfirmarLogout" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 rounded-4 overflow-hidden shadow-lg text-center">
+            <div class="modal-header modal-header-custom p-3 justify-content-center">
+                <h5 class="modal-title fw-bold fs-6 m-0 text-white d-flex align-items-center gap-2">
+                    <i class="bi bi-box-arrow-right text-warning fs-5"></i> Confirmar Saída
+                </h5>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-secondary mb-0">Deseja realmente encerrar a sua sessão e sair do sistema?</p>
+            </div>
+            <div class="modal-footer bg-light p-3 border-top justify-content-center gap-2">
+                <button type="button" class="btn btn-outline-secondary rounded-3 px-3 btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <a href="logout.php" class="btn btn-danger rounded-3 px-3 btn-sm fw-semibold">Sair do Sistema</a>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -791,7 +902,6 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
                         })
                         .then(response => response.json())
                         .then(data => {
-                            // Atualiza a página imediatamente para o nome reaparecer posicionado na nova lista
                             location.reload();
                         })
                         .catch(() => {

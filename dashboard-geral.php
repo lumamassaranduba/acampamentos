@@ -19,11 +19,9 @@ $eh_geral      = in_array($perfil, $perfis_gerais, true);
 
 // MONTAGEM DA CONSULTA SQL DAS MODALIDADES (CARDS)
 if ($eh_geral) {
-    // Geral / Admin: Exibe todas as modalidades
     $sql = "SELECT * FROM modalidades WHERE id > 0 ORDER BY nome ASC";
     $stmt = $conn->prepare($sql);
 } else {
-    // Diretor / Coordenador: Exibe apenas acampamentos permitidos
     if (empty($permitidos)) {
         $modalidades = [];
     } else {
@@ -55,8 +53,8 @@ if (isset($stmt)) {
         :root {
             --navy-dark: #0A192F;
             --navy-light: #1E293B;
-            --gold-primary: #D4AF37;
-            --gold-hover: #B59228;
+            --gold-primary: #C5A059;
+            --gold-hover: #B28D46;
             --bg-main: #F8FAFC;
             --border-color: #E2E8F0;
             --text-primary: #0F172A;
@@ -70,29 +68,33 @@ if (isset($stmt)) {
             min-height: 100vh;
         }
 
-        /* Navbar */
+        /* Navbar Responsiva */
         .top-navbar {
             background-color: var(--navy-dark);
             border-bottom: 2px solid var(--gold-primary);
-            padding: 0.9rem 2rem;
+            padding: 0.75rem 1.25rem;
             position: sticky;
             top: 0;
             z-index: 1000;
             box-shadow: 0 4px 20px rgba(10, 25, 47, 0.15);
         }
 
-        /* Ícone redondo com a logo */
+        .user-brand-block {
+            min-width: 0; /* Previne overflow de texto flex */
+        }
+
         .brand-icon {
             width: 42px;
             height: 42px;
+            min-width: 42px;
             background-color: #ffffff;
-            border: 1px solid var(--gold-primary);
+            border: 2px solid var(--gold-primary);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
-            padding: 3px;
+            padding: 2px;
         }
 
         .brand-icon img {
@@ -102,16 +104,23 @@ if (isset($stmt)) {
             border-radius: 50%;
         }
 
+        .user-info-text {
+            line-height: 1.2;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         .main-container {
-            padding: 2.5rem 2rem;
-            max-width: 1400px;
+            padding: 2rem 1.25rem;
+            max-width: 1300px;
             margin: 0 auto;
         }
 
         /* Botões Navbar */
         .btn-gold {
             background-color: var(--gold-primary);
-            color: var(--navy-dark);
+            color: #ffffff;
             font-weight: 600;
             border: none;
             transition: all 0.2s ease;
@@ -119,8 +128,7 @@ if (isset($stmt)) {
 
         .btn-gold:hover {
             background-color: var(--gold-hover);
-            color: var(--navy-dark);
-            transform: translateY(-1px);
+            color: #ffffff;
         }
 
         .btn-outline-gold {
@@ -133,11 +141,11 @@ if (isset($stmt)) {
 
         .btn-outline-gold:hover {
             background-color: var(--gold-primary);
-            color: var(--navy-dark);
+            color: #ffffff;
         }
 
         .btn-outline-danger-custom {
-            border: 1px solid rgba(239, 68, 68, 0.6);
+            border: 1px solid rgba(239, 68, 68, 0.5);
             color: #f87171;
             background: transparent;
             transition: all 0.2s ease;
@@ -148,89 +156,99 @@ if (isset($stmt)) {
             color: #ffffff;
         }
 
-        /* Design do Card Limpo */
-        .card-modern {
+        /* Cards Elegantes */
+        .card-acampamento {
             background: #ffffff;
-            border: 1px solid #E2E8F0;
+            border: 1px solid var(--border-color);
             border-radius: 20px;
-            padding: 12px;
+            padding: 1.5rem 1.25rem 1.25rem 1.25rem;
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
             display: flex;
             flex-direction: column;
+            align-items: center;
+            text-align: center;
             height: 100%;
+            position: relative;
         }
 
-        .card-modern:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 24px -6px rgba(10, 25, 47, 0.12);
-            border-color: #CBD5E1;
+        .card-acampamento:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 15px 30px rgba(10, 25, 47, 0.1);
+            border-color: var(--gold-primary);
         }
 
-        /* Área da Imagem */
-        .card-banner-box {
-            width: 100%;
-            height: 180px;
-            border-radius: 14px;
-            background-color: #F1F5F9;
-            overflow: hidden;
+        .logo-circle-wrapper {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 3px solid var(--gold-primary);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-
-        .card-banner-box img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            padding: 12px;
+            overflow: hidden;
+            margin-bottom: 1.2rem;
+            padding: 6px;
             transition: transform 0.3s ease;
         }
 
-        .card-modern:hover .card-banner-box img {
-            transform: scale(1.04);
+        .card-acampamento:hover .logo-circle-wrapper {
+            transform: scale(1.05);
         }
 
-        /* Conteúdo e Informações */
-        .card-info {
-            padding: 14px 4px 4px 4px;
+        .logo-circle-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 50%;
+        }
+
+        .card-content {
             display: flex;
             flex-direction: column;
             flex-grow: 1;
             justify-content: space-between;
+            width: 100%;
         }
 
-        .card-title-text {
-            font-size: 1.15rem;
+        .card-acampamento-title {
+            font-size: 1.25rem;
             font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 4px;
-            line-height: 1.3;
+            color: var(--navy-dark);
+            margin-bottom: 0.3rem;
         }
 
-        .card-subtitle-text {
+        .card-acampamento-subtitle {
             font-size: 0.85rem;
             color: var(--text-muted);
-            margin-bottom: 1rem;
+            margin-bottom: 1.25rem;
             min-height: 38px;
+            line-height: 1.4;
         }
 
-        /* Botão Acessar Painel */
-        .btn-card-action {
+        .btn-card-primary {
             background-color: var(--navy-dark);
             color: #ffffff;
             font-weight: 600;
             border-radius: 12px;
-            border: none;
-            padding: 0.6rem 1rem;
-            transition: all 0.2s ease;
+            border: 1px solid var(--navy-dark);
+            padding: 0.65rem 1rem;
             font-size: 0.9rem;
             text-decoration: none;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
         }
 
-        .btn-card-action:hover {
+        .btn-card-primary:hover {
             background-color: var(--gold-primary);
-            color: var(--navy-dark) !important;
+            border-color: var(--gold-primary);
+            color: #ffffff !important;
+            box-shadow: 0 4px 12px rgba(197, 160, 89, 0.3);
         }
 
         .modal-header-custom {
@@ -239,47 +257,73 @@ if (isset($stmt)) {
             border-bottom: 2px solid var(--gold-primary);
         }
 
-        @media (max-width: 768px) {
+        /* REGRAS ESPECÍFICAS PARA SMARTPHONES / CELULARES */
+        @media (max-width: 576px) {
             .top-navbar {
-                padding: 0.8rem 1rem;
+                padding: 0.65rem 0.85rem;
             }
+
+            .brand-icon {
+                width: 36px;
+                height: 36px;
+                min-width: 36px;
+            }
+
+            .user-info-text h6 {
+                font-size: 0.82rem !important;
+            }
+
+            .user-info-text small {
+                font-size: 0.68rem !important;
+            }
+
+            .nav-actions {
+                gap: 0.35rem !important;
+            }
+
+            .nav-actions .btn {
+                padding: 0.4rem 0.6rem !important;
+            }
+
+            .logo-circle-wrapper {
+                width: 90px;
+                height: 90px;
+            }
+
             .main-container {
-                padding: 1.5rem 1rem;
-            }
-            .card-banner-box {
-                height: 160px;
+                padding: 1.25rem 0.85rem;
             }
         }
     </style>
 </head>
 <body>
 
-<!-- NAVBAR -->
-<nav class="top-navbar d-flex align-items-center justify-content-between">
-    <div class="d-flex align-items-center gap-3">
+<!-- NAVBAR COM RESPIRO AUMENTADO -->
+<nav class="top-navbar d-flex align-items-center justify-content-between gap-2">
+    <div class="d-flex align-items-center gap-2 gap-sm-3 user-brand-block">
         <div class="brand-icon shadow-sm">
             <img src="./uploads/logos/logoefata.png" alt="Logo Éfata" onerror="this.onerror=null; this.src='assets/img/logo.png';">
         </div>
-        <div>
-            <h6 class="fw-bold m-0 text-white"><?= htmlspecialchars($_SESSION['usuario_nome'] ?? 'Usuário') ?></h6>
-            <small class="text-light opacity-75 d-block" style="font-size: 0.78rem;"><?= htmlspecialchars($perfil) ?></small>
+        <div class="user-info-text">
+            <h6 class="fw-bold m-0 text-white text-truncate" style="font-size: 0.92rem;"><?= htmlspecialchars($_SESSION['usuario_nome'] ?? 'Usuário') ?></h6>
+            <small class="text-light opacity-75 d-block text-truncate" style="font-size: 0.72rem;"><?= htmlspecialchars($perfil) ?></small>
         </div>
     </div>
 
-    <div class="d-flex align-items-center gap-2">
+    <div class="d-flex align-items-center gap-2 nav-actions">
         <?php if ($eh_geral): ?>
-            <button class="btn btn-gold btn-sm rounded-3 px-3 py-2 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalNovaEdicao">
+            <button class="btn btn-gold btn-sm rounded-3 px-2 px-sm-3 py-2 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalNovaEdicao" title="Inserir Acampamento">
                 <i class="bi bi-plus-lg"></i>
                 <span class="d-none d-md-inline">Inserir Acampamento</span>
             </button>
 
-            <a href="gestao-acessos.php" class="btn btn-outline-gold btn-sm rounded-3 px-3 py-2 d-flex align-items-center gap-2">
+            <a href="gestao-acessos.php" class="btn btn-outline-gold btn-sm rounded-3 px-2 px-sm-3 py-2 d-flex align-items-center gap-2" title="Acessos">
                 <i class="bi bi-key-fill"></i>
                 <span class="d-none d-md-inline">Acessos</span>
             </a>
         <?php endif; ?>
 
-        <button class="btn btn-outline-danger-custom btn-sm rounded-3 px-3 py-2 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalConfirmarLogout">
+        <button class="btn btn-outline-danger-custom btn-sm rounded-3 px-2 px-sm-3 py-2 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalConfirmarLogout" title="Sair">
             <i class="bi bi-box-arrow-right"></i>
             <span class="d-none d-md-inline">Sair</span>
         </button>
@@ -287,16 +331,15 @@ if (isset($stmt)) {
 </nav>
 
 <div class="main-container">
-    <div class="text-center mb-4">
-        <h2 class="fw-bold text-dark m-0 mb-1" style="font-size: 1.8rem;">Selecione o Acampamento</h2>
-        <p class="text-muted m-0" style="font-size: 0.9rem;">Escolha um acampamento abaixo para gerenciar.</p>
+    <div class="text-center mb-4 pb-2">
+        <h2 class="fw-bold text-dark m-0 mb-1" style="font-size: 1.65rem;">Selecione o Acampamento</h2>
+        <p class="text-muted m-0" style="font-size: 0.88rem;">Escolha um acampamento abaixo para gerenciar os módulos e edições.</p>
     </div>
 
     <!-- GRID DE CARDS -->
-    <div class="row g-4 justify-content-center">
+    <div class="row g-3 g-sm-4 justify-content-center">
         <?php if (!empty($modalidades)): ?>
             <?php foreach ($modalidades as $mod): 
-                $corMod = !empty($mod['cor']) ? $mod['cor'] : '#D4AF37';
                 $nomeMod = htmlspecialchars($mod['nome']);
 
                 $nomeLimpo = mb_strtolower(trim($mod['nome']), 'UTF-8');
@@ -321,8 +364,8 @@ if (isset($stmt)) {
                 }
             ?>
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                    <div class="card-modern">
-                        <div class="card-banner-box">
+                    <div class="card-acampamento">
+                        <div class="logo-circle-wrapper">
                             <?php if ($caminhoLogo): ?>
                                 <img src="<?= $caminhoLogo ?>?v=<?= time() ?>" alt="<?= $nomeMod ?>">
                             <?php else: ?>
@@ -330,16 +373,15 @@ if (isset($stmt)) {
                             <?php endif; ?>
                         </div>
 
-                        <div class="card-info">
+                        <div class="card-content">
                             <div>
-                                <h3 class="card-title-text"><?= $nomeMod ?></h3>
-                                <p class="card-subtitle-text">
+                                <h3 class="card-acampamento-title"><?= $nomeMod ?></h3>
+                                <p class="card-acampamento-subtitle">
                                     <?= !empty($mod['lema']) ? htmlspecialchars($mod['lema']) : (!empty($mod['publico_alvo']) ? htmlspecialchars($mod['publico_alvo']) : 'Acampamento Paroquial') ?>
                                 </p>
                             </div>
 
-                            <a href="dashboard-acampamento.php?modalidade_id=<?= $mod['id'] ?>" 
-                               class="btn btn-card-action w-100 d-flex align-items-center justify-content-center gap-2">
+                            <a href="dashboard-acampamento.php?modalidade_id=<?= $mod['id'] ?>" class="btn btn-card-primary w-100">
                                 <span>Acessar Painel</span>
                                 <i class="bi bi-arrow-right"></i>
                             </a>
@@ -349,7 +391,7 @@ if (isset($stmt)) {
             <?php endforeach; ?>
         <?php else: ?>
             <div class="col-12">
-                <div class="alert alert-light border rounded-4 p-5 text-center text-secondary shadow-sm">
+                <div class="alert alert-light border rounded-4 p-4 p-sm-5 text-center text-secondary shadow-sm">
                     <i class="bi bi-house-exclamation fs-1 d-block mb-3 text-warning opacity-75"></i>
                     <h5 class="fw-bold text-dark">Nenhum acampamento encontrado</h5>
                     <p class="m-0 text-muted">Nenhum acampamento vinculado ao seu perfil no momento.</p>
