@@ -333,7 +333,7 @@ if (isset($stmt)) {
 <div class="main-container">
     <div class="text-center mb-4 pb-2">
         <h2 class="fw-bold text-dark m-0 mb-1" style="font-size: 1.65rem;">Selecione o Acampamento</h2>
-        <p class="text-muted m-0" style="font-size: 0.88rem;">Escolha um acampamento abaixo para gerenciar os módulos e edições.</p>
+        <p class="text-muted m-0" style="font-size: 0.88rem;">Escolha um acampamento abaixo para gerenciar.</p>
     </div>
 
     <!-- GRID DE CARDS -->

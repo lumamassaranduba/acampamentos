@@ -55,7 +55,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
     }
 }
 
-// BUSCA DE EQUIPES
+// PROCESSAMENTO: Resgatar Atribuições de Outra Edição
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['acao'] === 'resgatar_atribuicoes') {
+    if ($edicao_inativa) {
+        $mensagem_erro = "Esta edição está inativa. Não é possível importar atribuições.";
+    } else {
+        $edicao_origem_id = intval($_POST['edicao_origem_id'] ?? 0);
+
+        if ($edicao_origem_id > 0) {
+            // Busca equipes da edição escolhida
+            $stmt_orig = $conn->prepare("SELECT nome, atribuicoes FROM equipes_trabalho WHERE edicao_id = ?");
+            $stmt_orig->bind_param("i", $edicao_origem_id);
+            $stmt_orig->execute();
+            $equipes_origem = $stmt_orig->get_result()->fetch_all(MYSQLI_ASSOC);
+
+            if (empty($equipes_origem)) {
+                $mensagem_erro = "A edição selecionada não possui equipes cadastradas para resgatar.";
+            } else {
+                $copiadas = 0;
+                foreach ($equipes_origem as $eq_orig) {
+                    $nome_eq = $eq_orig['nome'];
+                    $atrib_eq = $eq_orig['atribuicoes'];
+
+                    // Verifica se essa equipe já existe na edição atual
+                    $stmt_check = $conn->prepare("SELECT id FROM equipes_trabalho WHERE edicao_id = ? AND LOWER(TRIM(nome)) = LOWER(TRIM(?)) LIMIT 1");
+                    $stmt_check->bind_param("is", $edicao_id, $nome_eq);
+                    $stmt_check->execute();
+                    $existe = $stmt_check->get_result()->fetch_assoc();
+
+                    if ($existe) {
+                        // Atualiza as atribuições da equipe existente
+                        $stmt_upd = $conn->prepare("UPDATE equipes_trabalho SET atribuicoes = ? WHERE id = ?");
+                        $stmt_upd->bind_param("si", $atrib_eq, $existe['id']);
+                        $stmt_upd->execute();
+                    } else {
+                        // Cria a equipe na nova edição já com as atribuições
+                        $stmt_ins = $conn->prepare("INSERT INTO equipes_trabalho (edicao_id, nome, atribuicoes) VALUES (?, ?, ?)");
+                        $stmt_ins->bind_param("iss", $edicao_id, $nome_eq, $atrib_eq);
+                        $stmt_ins->execute();
+                    }
+                    $copiadas++;
+                }
+                $mensagem_sucesso = "Atribuições de {$copiadas} equipe(s) resgatadas com sucesso!";
+            }
+        }
+    }
+}
+
+// BUSCA DE EDIÇÕES ANTERIORES DA MESMA MODALIDADE PARA O MODAL DE RESGATE
+$mod_id_busca = $modalidade_id ?: ($edicao['modalidade_id'] ?? 0);
+$stmt_ed_ant = $conn->prepare("
+    SELECT DISTINCT e.id, e.ano, e.nome 
+    FROM edicoes e
+    INNER JOIN equipes_trabalho et ON et.edicao_id = e.id
+    WHERE e.modalidade_id = ? AND e.id != ?
+    ORDER BY e.ano DESC, e.id DESC
+");
+$stmt_ed_ant->bind_param("ii", $mod_id_busca, $edicao_id);
+$stmt_ed_ant->execute();
+$edicoes_anteriores = $stmt_ed_ant->get_result()->fetch_all(MYSQLI_ASSOC);
+
+// BUSCA DE EQUIPES DA EDIÇÃO ATUAL
 $stmt = $conn->prepare("SELECT * FROM equipes_trabalho WHERE edicao_id = ? ORDER BY nome ASC");
 $stmt->bind_param("i", $edicao_id);
 $stmt->execute();
@@ -168,16 +228,25 @@ $equipes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             box-shadow: 0 4px 12px rgba(197, 160, 89, 0.3);
         }
 
-        .btn-gold { 
-            background-color: var(--gold-primary); 
-            color: #ffffff; 
-            font-weight: 600; 
-            border: none; 
+        /* Botão Discreto para Resgatar Edição */
+        .btn-resgatar-discreto {
+            background-color: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            font-weight: 500;
+            font-size: 0.82rem;
+            white-space: nowrap;
+            transition: all 0.2s ease;
         }
 
-        .btn-gold:hover { 
-            background-color: var(--gold-hover); 
-            color: #ffffff; 
+        .btn-resgatar-discreto:hover {
+            background-color: rgba(197, 160, 89, 0.08);
+            border-color: var(--gold-primary);
+            color: var(--navy-dark);
+        }
+
+        .btn-resgatar-discreto i {
+            color: var(--gold-primary);
         }
 
         .card-equipe-atribuicao {
@@ -228,10 +297,8 @@ $equipes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                 border: 1px solid #000000 !important;
                 padding: 20px !important;
                 margin-bottom: 0 !important;
-                min-height: 90vh; /* Ocupa quase toda a folha */
+                min-height: 90vh;
                 box-sizing: border-box;
-
-                /* REGRAS PARA QUEBRAR PÁGINA A CADA EQUIPE */
                 page-break-after: always !important;
                 break-after: page !important;
             }
@@ -283,7 +350,7 @@ $equipes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
     <main class="container py-3" style="max-width: 1200px;">
 
-        <!-- 1º CARD: TOPO DE NAVEGAÇÃO E BOTÃO DE EXPORTAR PDF / IMPRIMIR DIRETO -->
+        <!-- 1º CARD: TOPO DE NAVEGAÇÃO E BOTÕES -->
         <div class="card-custom p-3 p-md-4 mt-2 mt-md-3 mb-4 no-print d-flex align-items-center justify-content-between flex-wrap gap-3">
             <div class="d-flex align-items-center gap-3">
                 <a href="equipe-hub.php?edicao_id=<?= $edicao_id ?><?= $modalidade_id ? '&modalidade_id='.$modalidade_id : '' ?>" class="btn text-dark border-0 p-0 fs-4 d-flex align-items-center justify-content-center me-1" title="Voltar ao Hub da Equipe">
@@ -296,15 +363,24 @@ $equipes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                             <span class="badge bg-secondary"><i class="bi bi-lock-fill me-1"></i>Edição Inativa</span>
                         <?php endif; ?>
                     </div>
-                    <p class="text-muted small m-0">Consulte ou edite as tarefas de cada setor da edição.</p>
+                    <p class="text-muted small m-0">Consulte ou edite as tarefas de cada equipe da edição.</p>
                 </div>
             </div>
 
-            <!-- BOTÃO PARA DISPARAR DIRETO A IMPRESSÃO / SALVAR EM PDF -->
-            <button onclick="window.print()" class="btn btn-navy rounded-3 px-3 py-2 btn-sm d-flex align-items-center justify-content-center gap-2">
-                <i class="bi bi-file-earmark-pdf-fill text-danger fs-6"></i>
-                <span> IMPRIMIR </span>
-            </button>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <?php if (!$edicao_inativa): ?>
+                    <button type="button" class="btn btn-resgatar-discreto rounded-3 px-3 py-2 btn-sm d-flex align-items-center justify-content-center gap-1" data-bs-toggle="modal" data-bs-target="#modalResgatarEdicao" title="Importar atribuições de outra edição">
+                        <i class="bi bi-arrow-repeat"></i>
+                        <span>Resgatar edição</span>
+                    </button>
+                <?php endif; ?>
+
+                <!-- BOTÃO PARA DISPARAR DIRETO A IMPRESSÃO / SALVAR EM PDF -->
+                <button onclick="window.print()" class="btn btn-navy rounded-3 px-3 py-2 btn-sm d-flex align-items-center justify-content-center gap-2">
+                    <i class="bi bi-file-earmark-pdf-fill text-danger fs-6"></i>
+                    <span> IMPRIMIR </span>
+                </button>
+            </div>
         </div>
 
         <?php if (!empty($mensagem_sucesso)): ?>
@@ -329,6 +405,12 @@ $equipes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                 <div class="col-12 text-center py-5 text-muted card-custom">
                     <i class="bi bi-journal-text fs-1 text-muted opacity-50 d-block mb-2"></i>
                     <h5 class="fw-bold">Nenhuma equipe cadastrada para esta edição.</h5>
+                    <?php if (!$edicao_inativa && !empty($edicoes_anteriores)): ?>
+                        <p class="small mb-3">Você pode importar as equipes e atribuições de uma edição anterior.</p>
+                        <button type="button" class="btn btn-resgatar-discreto rounded-3 px-3 py-2 btn-sm" data-bs-toggle="modal" data-bs-target="#modalResgatarEdicao">
+                            <i class="bi bi-arrow-repeat me-1"></i> Resgatar edição
+                        </button>
+                    <?php endif; ?>
                 </div>
             <?php else: ?>
                 <?php foreach ($equipes as $eq): ?>
@@ -399,6 +481,59 @@ $equipes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                         <button type="button" class="btn btn-outline-secondary rounded-3 px-3" data-bs-dismiss="modal">Fechar</button>
                         <?php if (!$edicao_inativa): ?>
                             <button type="submit" class="btn btn-navy rounded-3 px-4">Salvar Atribuições</button>
+                        <?php endif; ?>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL RESGATAR ATRIBUIÇÕES DE OUTRA EDIÇÃO -->
+    <div class="modal fade no-print" id="modalResgatarEdicao" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 overflow-hidden shadow-lg">
+                <div class="modal-header modal-header-custom p-4">
+                    <h5 class="modal-title fw-bold d-flex align-items-center gap-2 fs-6">
+                        <i class="bi bi-arrow-repeat text-warning fs-5"></i>
+                        <span>Resgatar Atribuições de Outra Edição</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="equipe-atribuicoes.php?edicao_id=<?= $edicao_id ?><?= $modalidade_id ? '&modalidade_id='.$modalidade_id : '' ?>" method="POST">
+                    <input type="hidden" name="acao" value="resgatar_atribuicoes">
+                    
+                    <div class="modal-body p-4">
+                        <?php if (empty($edicoes_anteriores)): ?>
+                            <div class="text-center py-3 text-muted">
+                                <i class="bi bi-info-circle fs-2 d-block mb-2 text-warning"></i>
+                                <p class="mb-0 small">Nenhuma outra edição desta modalidade possui equipes e atribuições cadastradas ainda.</p>
+                            </div>
+                        <?php else: ?>
+                            <label class="form-label small fw-bold text-dark mb-2">Selecione o ano / edição de origem:</label>
+                            <select name="edicao_origem_id" class="form-select rounded-3 p-2 mb-3" required>
+                                <option value="">Escolha uma edição...</option>
+                                <?php foreach ($edicoes_anteriores as $ed_ant): ?>
+                                    <option value="<?= $ed_ant['id'] ?>">
+                                        <?= htmlspecialchars($ed_ant['ano'] . ' - ' . $ed_ant['nome']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+
+                            <div class="alert alert-warning border-0 rounded-3 small mb-0 d-flex align-items-start gap-2">
+                                <i class="bi bi-exclamation-circle-fill mt-1"></i>
+                                <div>
+                                    As equipes e textos de atribuições do ano escolhido serão copiados para esta edição. Alterações feitas aqui <strong>não</strong> afetarão a edição anterior.
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="modal-footer bg-light p-3 border-top justify-content-between">
+                        <button type="button" class="btn btn-outline-secondary rounded-3 px-3" data-bs-dismiss="modal">Cancelar</button>
+                        <?php if (!empty($edicoes_anteriores)): ?>
+                            <button type="submit" class="btn btn-navy rounded-3 px-4">
+                                <i class="bi bi-check2-circle me-1"></i> Importar Atribuições
+                            </button>
                         <?php endif; ?>
                     </div>
                 </form>

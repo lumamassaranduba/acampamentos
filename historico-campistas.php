@@ -27,7 +27,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
         $nome_pessoa = $res_p['nome'] ?? '';
 
         if (!empty($nome_pessoa)) {
-            $stmt_c = $conn->prepare("SELECT COUNT(*) as total FROM equipes_membros WHERE LOWER(TRIM(nome)) = LOWER(TRIM(?))");
+            $stmt_c = $conn->prepare("
+                SELECT COUNT(*) as total 
+                FROM equipes_membros em
+                INNER JOIN equipes_campistas ec ON em.equipe_id = ec.id
+                INNER JOIN edicoes ed ON ec.edicao_id = ed.id
+                WHERE LOWER(TRIM(em.nome)) = LOWER(TRIM(?))
+            ");
             $stmt_c->bind_param("s", $nome_pessoa);
             $stmt_c->execute();
             $total_camp = $stmt_c->get_result()->fetch_assoc()['total'] ?? 0;
@@ -35,7 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
             $stmt_e = $conn->prepare("
                 SELECT COUNT(*) as total 
                 FROM equipe_membros em 
-                JOIN equipe_geral eg ON em.voluntario_id = eg.id 
+                INNER JOIN equipe_geral eg ON em.voluntario_id = eg.id 
+                INNER JOIN equipes_trabalho et ON em.equipe_id = et.id
+                INNER JOIN edicoes ed ON et.edicao_id = ed.id
                 WHERE LOWER(TRIM(eg.nome)) = LOWER(TRIM(?))
             ");
             $stmt_e->bind_param("s", $nome_pessoa);
@@ -96,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
     $mensagem_sucesso = "Dados salvos no histórico com sucesso!";
 }
 
-// 4. PESQUISA CENTRALIZADA
+// 4. PESQUISA CENTRALIZADA (COM SUPORTE A PAPEL: CAMPISTA / SERVO + ACAMPAMENTO + ANO)
 $busca = trim($_GET['busca'] ?? '');
 
 $sql_unificado = "
@@ -109,7 +117,11 @@ $sql_unificado = "
         p.campista_origem,
         p.foto
     FROM (
-        SELECT nome FROM equipes_membros WHERE nome IS NOT NULL AND nome != ''
+        SELECT em.nome 
+        FROM equipes_membros em
+        INNER JOIN equipes_campistas ec ON em.equipe_id = ec.id
+        INNER JOIN edicoes ed ON ec.edicao_id = ed.id
+        WHERE em.nome IS NOT NULL AND em.nome != ''
         UNION
         SELECT nome FROM equipe_geral WHERE nome IS NOT NULL AND nome != ''
         UNION
@@ -132,10 +144,97 @@ $params = [];
 $types = "";
 
 if (!empty($busca)) {
-    $palavras = explode(' ', $busca);
-    foreach ($palavras as $palavra) {
-        $palavra = trim($palavra);
-        if ($palavra !== '') {
+    // Separa palavras e identifica filtros de papel (campista vs servo/equipe)
+    $palavras_brutas = preg_split('/\s+/', $busca);
+    $filtro_papel = null; // 'campista' | 'servo'
+    $termos_restantes = [];
+
+    foreach ($palavras_brutas as $palavra) {
+        $p_limpa = mb_strtolower(trim($palavra), 'UTF-8');
+        if ($p_limpa === '') continue;
+
+        if (in_array($p_limpa, ['campista', 'campistas'])) {
+            $filtro_papel = 'campista';
+        } elseif (in_array($p_limpa, ['servo', 'servos', 'servidor', 'servidores', 'equipe', 'equipes', 'trabalho'])) {
+            $filtro_papel = 'servo';
+        } else {
+            $termos_restantes[] = $palavra;
+        }
+    }
+
+    if ($filtro_papel === 'campista') {
+        // Exige que tenha registro como campista (oficial válido ou manual)
+        $sql_unificado .= " AND ((em.id IS NOT NULL AND ec.id IS NOT NULL AND ed_camp.id IS NOT NULL) OR (p.campista_origem IS NOT NULL AND TRIM(p.campista_origem) != ''))";
+
+        if (!empty($termos_restantes)) {
+            $cond_oficial = [];
+            $cond_manual  = [];
+            $cond_nome    = [];
+
+            foreach ($termos_restantes as $t) {
+                $cond_oficial[] = "(ed_camp.nome LIKE ? OR CAST(ed_camp.ano AS CHAR) LIKE ? OR ec.nome LIKE ?)";
+                $cond_manual[]  = "(p.campista_origem LIKE ?)";
+                $cond_nome[]    = "(unificados.nome LIKE ?)";
+            }
+
+            $sql_unificado .= " AND (
+                (" . implode(" AND ", $cond_oficial) . ")
+                OR (" . implode(" AND ", $cond_manual) . ")
+                OR (" . implode(" AND ", $cond_nome) . ")
+            )";
+
+            foreach ($termos_restantes as $t) {
+                $term = "%{$t}%";
+                $params[] = $term; $params[] = $term; $params[] = $term;
+                $types .= "sss";
+            }
+            foreach ($termos_restantes as $t) {
+                $params[] = "%{$t}%";
+                $types .= "s";
+            }
+            foreach ($termos_restantes as $t) {
+                $params[] = "%{$t}%";
+                $types .= "s";
+            }
+        }
+    } elseif ($filtro_papel === 'servo') {
+        // Exige que tenha registro em equipe de trabalho (oficial válido ou manual)
+        $sql_unificado .= " AND ((em_eq.id IS NOT NULL AND et.id IS NOT NULL AND ed_eq.id IS NOT NULL) OR (p.equipe_trabalho_origem IS NOT NULL AND TRIM(p.equipe_trabalho_origem) != ''))";
+
+        if (!empty($termos_restantes)) {
+            $cond_oficial = [];
+            $cond_manual  = [];
+            $cond_nome    = [];
+
+            foreach ($termos_restantes as $t) {
+                $cond_oficial[] = "(ed_eq.nome LIKE ? OR CAST(ed_eq.ano AS CHAR) LIKE ? OR et.nome LIKE ?)";
+                $cond_manual[]  = "(p.equipe_trabalho_origem LIKE ?)";
+                $cond_nome[]    = "(unificados.nome LIKE ?)";
+            }
+
+            $sql_unificado .= " AND (
+                (" . implode(" AND ", $cond_oficial) . ")
+                OR (" . implode(" AND ", $cond_manual) . ")
+                OR (" . implode(" AND ", $cond_nome) . ")
+            )";
+
+            foreach ($termos_restantes as $t) {
+                $term = "%{$t}%";
+                $params[] = $term; $params[] = $term; $params[] = $term;
+                $types .= "sss";
+            }
+            foreach ($termos_restantes as $t) {
+                $params[] = "%{$t}%";
+                $types .= "s";
+            }
+            foreach ($termos_restantes as $t) {
+                $params[] = "%{$t}%";
+                $types .= "s";
+            }
+        }
+    } else {
+        // Pesquisa padrão (nome, acampamento, ano ou equipe)
+        foreach ($termos_restantes as $palavra) {
             $term = "%{$palavra}%";
             $sql_unificado .= " AND (
                 unificados.nome LIKE ? 
@@ -143,12 +242,15 @@ if (!empty($busca)) {
                 OR p.equipe_trabalho_origem LIKE ? 
                 OR ed_camp.nome LIKE ? 
                 OR CAST(ed_camp.ano AS CHAR) LIKE ? 
+                OR ec.nome LIKE ?
                 OR ed_eq.nome LIKE ? 
                 OR CAST(ed_eq.ano AS CHAR) LIKE ?
+                OR et.nome LIKE ?
             )";
             $params[] = $term; $params[] = $term; $params[] = $term;
-            $params[] = $term; $params[] = $term; $params[] = $term; $params[] = $term;
-            $types .= "sssssss";
+            $params[] = $term; $params[] = $term; $params[] = $term;
+            $params[] = $term; $params[] = $term; $params[] = $term;
+            $types .= "sssssssss";
         }
     }
 }
@@ -427,7 +529,7 @@ $query_contexto = "edicao_id={$edicao_id_param}&modalidade_id={$modalidade_id_pa
                 
                 <div class="search-box-custom d-flex align-items-center shadow-sm">
                     <i class="bi bi-search text-muted fs-6 ms-2 me-2"></i>
-                    <input type="text" name="busca" class="form-control border-0 bg-transparent search-input-custom" placeholder="Pesquisar por nome, acampamento ou ano (ex: Sênior 2025)..." value="<?= htmlspecialchars($busca) ?>" autocomplete="off">
+                    <input type="text" name="busca" class="form-control border-0 bg-transparent search-input-custom" placeholder="Pesquisar por nome, campista/servo, acampamento ou ano (ex: campistas CES 2026)..." value="<?= htmlspecialchars($busca) ?>" autocomplete="off">
                     <?php if (!empty($busca)): ?>
                         <a href="historico-campistas.php?<?= $query_contexto ?>" class="btn p-0 border-0 text-muted ms-2 me-1" title="Limpar pesquisa">
                             <i class="bi bi-x-lg"></i>
@@ -447,17 +549,18 @@ $query_contexto = "edicao_id={$edicao_id_param}&modalidade_id={$modalidade_id_pa
             <div class="row g-3">
                 <?php foreach ($lista_pessoas as $p): ?>
                     <?php
-                    // 1. Busca o registro mais recente em cada edição como Campista
+                    // 1. Busca o registro mais recente em cada edição válida como Campista (INNER JOIN ignora registros órfãos)
                     $stmt_c = $conn->prepare("
                         SELECT ed.nome as acampamento, ed.ano, ec.nome as equipe_cor, ed.id as edicao_id
                         FROM equipes_membros em
-                        LEFT JOIN equipes_campistas ec ON em.equipe_id = ec.id
-                        LEFT JOIN edicoes ed ON ec.edicao_id = ed.id
+                        INNER JOIN equipes_campistas ec ON em.equipe_id = ec.id
+                        INNER JOIN edicoes ed ON ec.edicao_id = ed.id
                         WHERE LOWER(TRIM(em.nome)) = LOWER(TRIM(?))
                         AND em.id IN (
                             SELECT MAX(em_sub.id)
                             FROM equipes_membros em_sub
-                            LEFT JOIN equipes_campistas ec_sub ON em_sub.equipe_id = ec_sub.id
+                            INNER JOIN equipes_campistas ec_sub ON em_sub.equipe_id = ec_sub.id
+                            INNER JOIN edicoes ed_sub ON ec_sub.edicao_id = ed_sub.id
                             WHERE LOWER(TRIM(em_sub.nome)) = LOWER(TRIM(?))
                             GROUP BY ec_sub.edicao_id
                         )
@@ -471,15 +574,16 @@ $query_contexto = "edicao_id={$edicao_id_param}&modalidade_id={$modalidade_id_pa
                     $stmt_e = $conn->prepare("
                         SELECT ed.nome as acampamento, ed.ano, et.nome as equipe_nome, ed.id as edicao_id
                         FROM equipe_membros em
-                        JOIN equipe_geral eg ON em.voluntario_id = eg.id
-                        JOIN equipes_trabalho et ON em.equipe_id = et.id
-                        JOIN edicoes ed ON et.edicao_id = ed.id
+                        INNER JOIN equipe_geral eg ON em.voluntario_id = eg.id
+                        INNER JOIN equipes_trabalho et ON em.equipe_id = et.id
+                        INNER JOIN edicoes ed ON et.edicao_id = ed.id
                         WHERE LOWER(TRIM(eg.nome)) = LOWER(TRIM(?))
                         AND em.id IN (
                             SELECT MAX(em_sub.id)
                             FROM equipe_membros em_sub
-                            JOIN equipe_geral eg_sub ON em_sub.voluntario_id = eg_sub.id
-                            JOIN equipes_trabalho et_sub ON em_sub.equipe_id = et_sub.id
+                            INNER JOIN equipe_geral eg_sub ON em_sub.voluntario_id = eg_sub.id
+                            INNER JOIN equipes_trabalho et_sub ON em_sub.equipe_id = et_sub.id
+                            INNER JOIN edicoes ed_sub ON et_sub.edicao_id = ed_sub.id
                             WHERE LOWER(TRIM(eg_sub.nome)) = LOWER(TRIM(?))
                             GROUP BY et_sub.edicao_id
                         )
@@ -680,7 +784,6 @@ $query_contexto = "edicao_id={$edicao_id_param}&modalidade_id={$modalidade_id_pa
                       .replace(/[\u0300-\u036f]/g, "");
         }
 
-        // Extrai o nome/ano base do acampamento (ex: "1 pac 2026")
         function extrairBaseAcampamento(txt) {
             if (!txt) return '';
             let norm = normalizarTexto(txt);
@@ -726,7 +829,6 @@ $query_contexto = "edicao_id={$edicao_id_param}&modalidade_id={$modalidade_id_pa
                     let lTrim = linha.trim();
                     if (lTrim !== '') {
                         let baseManual = extrairBaseAcampamento(lTrim);
-                        // Exibe texto manual apenas se NÃO pertencer a um acampamento oficial já listado acima
                         let jaExisteOficial = edicoesOficiaisCampista.some(baseOficial => baseOficial !== '' && baseManual.includes(baseOficial));
                         if (!jaExisteOficial) {
                             htmlCampista += `<div class="fw-semibold text-dark mb-1">• ${lTrim}</div>`;
@@ -829,7 +931,6 @@ $query_contexto = "edicao_id={$edicao_id_param}&modalidade_id={$modalidade_id_pa
             document.getElementById('edt_telefone').value = pessoaAtual.telefone !== 'Não informado' ? pessoaAtual.telefone : '';
             document.getElementById('edt_data_nascimento').value = pessoaAtual.data_nascimento_raw || '';
 
-            // Filtra linhas manuais que sejam de acampamentos oficiais atuais
             let edicoesOficiaisCampista = [];
             if (pessoaAtual.historico_campista && pessoaAtual.historico_campista.length > 0) {
                 pessoaAtual.historico_campista.forEach(c => {

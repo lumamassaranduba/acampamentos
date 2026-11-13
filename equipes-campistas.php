@@ -241,7 +241,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// 5. Busca as equipas da edição
+// 5. Busca as equipes da edição
 $equipes = [];
 $res_eq = $conn->query("SELECT * FROM equipes_campistas WHERE edicao_id = $edicao_id ORDER BY id ASC");
 
@@ -303,7 +303,7 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $nomeModalidade ?> - Divisão de Equipas e Campistas</title>
+    <title><?= $nomeModalidade ?> - Divisão de Equipes e Campistas</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
@@ -315,6 +315,7 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
         :root {
             --cor-modalidade: <?= $cor ?>;
             --navy-dark: #0A192F;
+            --navy-hover: #172A46;
             --gold-primary: #C5A059;
             --gold-hover: #B28D46;
             --bg-main: #F8FAFC;
@@ -380,9 +381,23 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
             color: #ffffff;
         }
 
-        /* Botão Mover Campista em Dourado */
+        /* Botões na Paleta */
+        .btn-gold {
+            background-color: var(--gold-primary);
+            color: #ffffff;
+            border: none;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-gold:hover {
+            background-color: var(--gold-hover);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(197, 160, 89, 0.3);
+        }
+
         .btn-outline-gold {
-            border: 1px solid var(--gold-primary);
+            border: 1.5px solid var(--gold-primary);
             color: var(--gold-primary);
             background: transparent;
             font-weight: 600;
@@ -396,8 +411,47 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
             box-shadow: 0 4px 12px rgba(197, 160, 89, 0.25);
         }
 
+        .btn-navy {
+            background-color: var(--navy-dark);
+            color: #ffffff;
+            border: 1.5px solid var(--navy-dark);
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-navy:hover {
+            background-color: var(--navy-hover);
+            color: #ffffff;
+            border-color: var(--navy-hover);
+            box-shadow: 0 4px 12px rgba(10, 25, 47, 0.2);
+        }
+
         .main-content { padding: 32px 48px; width: 100%; max-width: 1400px; margin: 0 auto; box-sizing: border-box; }
-        .equipe-card { background: #ffffff; border: 1.5px solid #000000; border-radius: 0px; padding: 0; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+
+        /* Cabeçalho da Página Responsivo */
+        .page-header-card {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 20px 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 16px rgba(10, 25, 47, 0.04);
+        }
+
+        .header-actions-grid {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-actions-grid .btn {
+            white-space: nowrap;
+            justify-content: center;
+            padding-top: 8px;
+            padding-bottom: 8px;
+        }
+
+        .equipe-card { background: #ffffff; border: 1.5px solid #000000; border-radius: 0px; padding: 0; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
         .equipe-header { padding: 8px 12px; font-weight: 800; font-size: 0.95rem; color: #000000; text-transform: uppercase; border-bottom: 1.5px solid #000000; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
         .equipe-header-btns { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
         .equipe-header-btns .btn { font-size: 0.8rem; font-weight: 600; padding: 3px 8px !important; line-height: 1.2; }
@@ -433,14 +487,65 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 4px 8px;
-            border-radius: 6px;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background-color: #F1F5F9;
             transition: color 0.2s ease, background-color 0.2s ease;
+            flex-shrink: 0;
         }
 
         .btn-only-arrow:hover {
             color: var(--navy-dark);
-            background-color: rgba(0, 0, 0, 0.05);
+            background-color: #E2E8F0;
+        }
+
+        /* AJUSTES ESPECÍFICOS PARA CELULAR */
+        @media (max-width: 767.98px) {
+            .main-content {
+                padding: 16px;
+            }
+
+            .page-header-card {
+                padding: 16px;
+                border-radius: 18px;
+                margin-bottom: 20px;
+            }
+
+            .header-actions-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                width: 100%;
+                padding-top: 12px;
+                border-top: 1px solid #F1F5F9;
+            }
+
+            .header-actions-grid .btn-nova-equipe {
+                grid-column: span 2;
+                padding-top: 10px;
+                padding-bottom: 10px;
+            }
+
+            /* Evita que o nome da equipe seja cortado em "CO..." no celular */
+            .equipe-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+                padding: 10px 12px;
+            }
+
+            .equipe-header-btns {
+                width: 100%;
+                justify-content: flex-end;
+                border-top: 1px solid rgba(0, 0, 0, 0.15);
+                padding-top: 6px;
+            }
+
+            /* Mantém ícones de editar/excluir visíveis no toque (mobile não tem hover) */
+            .item-row-actions {
+                display: inline-flex;
+            }
         }
 
         @media print {
@@ -477,48 +582,49 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
 <main class="main-content">
 
     <!-- CABEÇALHO DA PÁGINA -->
-    <div class="bg-white p-4 rounded-4 border mb-4 shadow-sm d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3 no-print">
-        <div class="d-flex align-items-center gap-2">
-            <a href="edicao-detalhes.php?edicao_id=<?= $edicao_id ?>" class="btn-only-arrow me-1" title="Voltar">
-                <i class="bi bi-arrow-left fs-4"></i>
+    <div class="page-header-card d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-3 no-print">
+        <div class="d-flex align-items-center gap-3">
+            <a href="edicao-detalhes.php?edicao_id=<?= $edicao_id ?>" class="btn-only-arrow" title="Voltar">
+                <i class="bi bi-arrow-left fs-5"></i>
             </a>
 
-            <div>
-                <h3 class="fw-bold m-0 text-dark">Equipes e Campistas</h3>
-                <span class="text-muted small"><?= $nomeModalidade ?> - <?= $nomeEdicao ?> (<?= $anoEdicao ?>)</span>
+            <div class="min-w-0">
+                <h4 class="fw-bold m-0 text-dark" style="line-height: 1.2;">Equipes e Campistas</h4>
+                <span class="text-muted small d-block mt-1">
+                    <i class="bi bi-calendar-event me-1" style="color: var(--gold-primary);"></i><?= $nomeModalidade ?> - <?= $nomeEdicao ?> (<?= $anoEdicao ?>)
+                </span>
             </div>
         </div>
 
-        <div class="d-flex gap-2 flex-wrap">
-            <!-- BOTÃO MOVER CAMPISTA EM DOURADO -->
-            <button class="btn btn-outline-gold btn-sm rounded-3 px-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalTrocarEquipe">
+        <div class="header-actions-grid">
+            <button class="btn btn-navy btn-sm rounded-3 px-3 d-flex align-items-center gap-2 btn-nova-equipe order-md-3" data-bs-toggle="modal" data-bs-target="#modalCriarEquipe">
+                <i class="bi bi-plus-lg"></i> Nova Equipe
+            </button>
+            <button class="btn btn-outline-gold btn-sm rounded-3 px-3 d-flex align-items-center gap-2 order-md-1" data-bs-toggle="modal" data-bs-target="#modalTrocarEquipe">
                 <i class="bi bi-arrow-left-right"></i> Mover Campista
             </button>
-            <button onclick="window.print()" class="btn btn-outline-dark btn-sm rounded-3 px-3 d-flex align-items-center gap-2">
+            <button onclick="window.print()" class="btn btn-outline-dark btn-sm rounded-3 px-3 d-flex align-items-center gap-2 order-md-2">
                 <i class="bi bi-printer"></i> Imprimir
-            </button>
-            <button class="btn btn-dark btn-sm rounded-3 px-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalCriarEquipe">
-                <i class="bi bi-plus-lg"></i> Nova Equipe
             </button>
         </div>
     </div>
 
-    <!-- GRID DE EQUIPAS -->
+    <!-- GRID DE EQUIPES -->
     <div class="row" id="gridEquipes">
         <?php foreach ($equipes as $equipe): ?>
             <div class="col-12 col-lg-6 equipe-col mb-4" data-id="<?= $equipe['id'] ?>">
                 <div class="equipe-card">
                     
                     <div class="equipe-header" style="background-color: <?= htmlspecialchars($equipe['cor']) ?> !important;">
-                        <span class="text-truncate"><?= htmlspecialchars($equipe['nome']) ?></span>
+                        <span class="w-100" style="word-break: break-word;"><?= htmlspecialchars($equipe['nome']) ?></span>
                         
                         <div class="equipe-header-btns no-print">
                             <button class="btn btn-sm btn-light text-dark rounded-1" title="Adicionar Líder" onclick="abrirModalLider(<?= $equipe['id'] ?>)">+ Líder</button>
                             <button class="btn btn-sm btn-light text-dark rounded-1 fw-bold" title="Adicionar Campista" onclick="abrirModalCampista(<?= $equipe['id'] ?>)">+ Campista</button>
-                            <button class="btn btn-sm btn-light text-primary rounded-1" title="Editar Equipa" onclick="abrirModalEditarEquipe(<?= $equipe['id'] ?>, '<?= addslashes($equipe['nome']) ?>', '<?= $equipe['cor'] ?>')">
+                            <button class="btn btn-sm btn-light text-primary rounded-1" title="Editar Equipe" onclick="abrirModalEditarEquipe(<?= $equipe['id'] ?>, '<?= addslashes($equipe['nome']) ?>', '<?= $equipe['cor'] ?>')">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
-                            <button class="btn btn-sm btn-light text-danger rounded-1" title="Excluir Equipa" onclick="abrirModalExcluirEquipe(<?= $equipe['id'] ?>, '<?= addslashes($equipe['nome']) ?>')">
+                            <button class="btn btn-sm btn-light text-danger rounded-1" title="Excluir Equipe" onclick="abrirModalExcluirEquipe(<?= $equipe['id'] ?>, '<?= addslashes($equipe['nome']) ?>')">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>
@@ -584,12 +690,12 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
 <!-- MODAIS DE LÍDERES E CAMPISTAS -->
 <div class="modal fade no-print" id="modalEditarLider" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" class="modal-content border-0 rounded-4 shadow">
+        <form method="POST" class="modal-content border-0 rounded-4 overflow-hidden shadow">
             <input type="hidden" name="acao" value="editar_lider">
             <input type="hidden" name="lider_id" id="edt_lider_id" value="">
-            <div class="modal-header border-0 pb-0">
+            <div class="modal-header modal-header-custom">
                 <h5 class="modal-title fw-bold">Editar Líder</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
                 <div class="mb-3">
@@ -601,9 +707,9 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
                     <input type="text" name="nome" id="edt_lider_nome" class="form-control" required>
                 </div>
             </div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-primary rounded-3 px-4">Atualizar</button>
+            <div class="modal-footer bg-light border-top">
+                <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-gold rounded-3 px-4">Atualizar</button>
             </div>
         </form>
     </div>
@@ -611,18 +717,18 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
 
 <div class="modal fade no-print" id="modalExcluirLider" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" class="modal-content border-0 rounded-4 shadow">
+        <form method="POST" class="modal-content border-0 rounded-4 overflow-hidden shadow">
             <input type="hidden" name="acao" value="excluir_lider">
             <input type="hidden" name="lider_id" id="exc_lider_id" value="">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold text-danger">Remover Líder</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header modal-header-custom">
+                <h5 class="modal-title fw-bold text-white">Remover Líder</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4 text-center">
                 <p class="m-0 fs-6">Deseja remover <strong id="exc_lider_nome"></strong> do cargo de líder?</p>
             </div>
-            <div class="modal-footer border-0 pt-0 justify-content-center">
-                <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancelar</button>
+            <div class="modal-footer bg-light border-top justify-content-center">
+                <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Cancelar</button>
                 <button type="submit" class="btn btn-danger rounded-3 px-4">Sim, Remover</button>
             </div>
         </form>
@@ -631,12 +737,12 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
 
 <div class="modal fade no-print" id="modalEditarCampista" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" class="modal-content border-0 rounded-4 shadow">
+        <form method="POST" class="modal-content border-0 rounded-4 overflow-hidden shadow">
             <input type="hidden" name="acao" value="editar_campista">
             <input type="hidden" name="campista_id" id="edt_campista_id" value="">
-            <div class="modal-header border-0 pb-0">
+            <div class="modal-header modal-header-custom">
                 <h5 class="modal-title fw-bold">Editar Campista</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
                 <div class="mb-3">
@@ -644,9 +750,9 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
                     <input type="text" name="nome" id="edt_campista_nome" class="form-control" required>
                 </div>
             </div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-primary rounded-3 px-4">Salvar Alterações</button>
+            <div class="modal-footer bg-light border-top">
+                <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-gold rounded-3 px-4">Salvar Alterações</button>
             </div>
         </form>
     </div>
@@ -654,18 +760,18 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
 
 <div class="modal fade no-print" id="modalExcluirCampista" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" class="modal-content border-0 rounded-4 shadow">
+        <form method="POST" class="modal-content border-0 rounded-4 overflow-hidden shadow">
             <input type="hidden" name="acao" value="excluir_campista">
             <input type="hidden" name="campista_id" id="exc_campista_id" value="">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold text-danger">Remover Campista</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header modal-header-custom">
+                <h5 class="modal-title fw-bold text-white">Remover Campista</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4 text-center">
                 <p class="m-0 fs-6">Tem certeza que deseja remover o campista <strong id="exc_campista_nome"></strong> desta equipe?</p>
             </div>
-            <div class="modal-footer border-0 pt-0 justify-content-center">
-                <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancelar</button>
+            <div class="modal-footer bg-light border-top justify-content-center">
+                <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Cancelar</button>
                 <button type="submit" class="btn btn-danger rounded-3 px-4">Sim, Remover</button>
             </div>
         </form>
@@ -674,13 +780,13 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
 
 <div class="modal fade no-print" id="modalAdicionarCampista" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" class="modal-content border-0 rounded-4 shadow">
+        <form method="POST" class="modal-content border-0 rounded-4 overflow-hidden shadow">
             <input type="hidden" name="acao" value="adicionar_campista">
             <input type="hidden" name="equipe_id" id="campista_equipe_id" value="">
             
-            <div class="modal-header border-0 pb-0">
+            <div class="modal-header modal-header-custom">
                 <h5 class="modal-title fw-bold">Adicionar Campista</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             
             <div class="modal-body p-4">
@@ -698,9 +804,9 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
                 </div>
             </div>
             
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-dark rounded-3 px-4">Salvar Campista</button>
+            <div class="modal-footer bg-light border-top">
+                <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-gold rounded-3 px-4">Salvar Campista</button>
             </div>
         </form>
     </div>
@@ -708,12 +814,12 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
 
 <div class="modal fade no-print" id="modalEditarEquipe" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" class="modal-content border-0 rounded-4 shadow">
+        <form method="POST" class="modal-content border-0 rounded-4 overflow-hidden shadow">
             <input type="hidden" name="acao" value="editar_equipe">
             <input type="hidden" name="equipe_id" id="edt_equipe_id" value="">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Editar Equipa</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header modal-header-custom">
+                <h5 class="modal-title fw-bold">Editar Equipe</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
                 <div class="mb-3">
@@ -725,9 +831,9 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
                     <input type="color" name="cor_equipe" id="edt_cor_equipe" class="form-control form-control-color w-100">
                 </div>
             </div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-primary rounded-3 px-4">Atualizar</button>
+            <div class="modal-footer bg-light border-top">
+                <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-gold rounded-3 px-4">Atualizar</button>
             </div>
         </form>
     </div>
@@ -735,18 +841,18 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
 
 <div class="modal fade no-print" id="modalExcluirEquipe" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" class="modal-content border-0 rounded-4 shadow">
+        <form method="POST" class="modal-content border-0 rounded-4 overflow-hidden shadow">
             <input type="hidden" name="acao" value="excluir_equipe">
             <input type="hidden" name="equipe_id" id="exc_equipe_id" value="">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold text-danger">Excluir Equipe</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header modal-header-custom">
+                <h5 class="modal-title fw-bold text-white">Excluir Equipe</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4 text-center">
                 <p class="m-0 fs-6">Tem certeza que deseja apagar a equipe <strong id="exc_nome_equipe"></strong>?</p>
             </div>
-            <div class="modal-footer border-0 pt-0 justify-content-center">
-                <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancelar</button>
+            <div class="modal-footer bg-light border-top justify-content-center">
+                <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Cancelar</button>
                 <button type="submit" class="btn btn-danger rounded-3 px-4">Sim, Excluir</button>
             </div>
         </form>
@@ -755,11 +861,11 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
 
 <div class="modal fade no-print" id="modalCriarEquipe" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" class="modal-content border-0 rounded-4 shadow">
+        <form method="POST" class="modal-content border-0 rounded-4 overflow-hidden shadow">
             <input type="hidden" name="acao" value="criar_equipe">
-            <div class="modal-header border-0 pb-0">
+            <div class="modal-header modal-header-custom">
                 <h5 class="modal-title fw-bold">Nova Equipe</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
                 <div class="mb-3">
@@ -771,9 +877,9 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
                     <input type="color" name="cor_equipe" class="form-control form-control-color w-100" value="#00bcd4">
                 </div>
             </div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-dark rounded-3 px-4">Salvar</button>
+            <div class="modal-footer bg-light border-top">
+                <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-gold rounded-3 px-4">Salvar</button>
             </div>
         </form>
     </div>
@@ -781,12 +887,12 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
 
 <div class="modal fade no-print" id="modalAdicionarLider" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" class="modal-content border-0 rounded-4 shadow">
+        <form method="POST" class="modal-content border-0 rounded-4 overflow-hidden shadow">
             <input type="hidden" name="acao" value="adicionar_lider">
             <input type="hidden" name="equipe_id" id="lider_equipe_id" value="">
-            <div class="modal-header border-0 pb-0">
+            <div class="modal-header modal-header-custom">
                 <h5 class="modal-title fw-bold">Adicionar Líder</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
                 <div class="mb-3">
@@ -798,9 +904,9 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
                     <input type="text" name="nome" class="form-control" required>
                 </div>
             </div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-dark rounded-3 px-4">Salvar Líder</button>
+            <div class="modal-footer bg-light border-top">
+                <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-gold rounded-3 px-4">Salvar Líder</button>
             </div>
         </form>
     </div>
@@ -809,11 +915,11 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
 <!-- MODAL SELEÇÃO DE TROCA DE EQUIPE -->
 <div class="modal fade no-print" id="modalTrocarEquipe" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" class="modal-content border-0 rounded-4 shadow">
+        <form method="POST" class="modal-content border-0 rounded-4 overflow-hidden shadow">
             <input type="hidden" name="acao" value="trocar_equipe_campista">
-            <div class="modal-header border-0 pb-0">
+            <div class="modal-header modal-header-custom">
                 <h5 class="modal-title fw-bold">Mover Campista de Equipe</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
                 <div class="mb-3">
@@ -835,9 +941,9 @@ $pessoas_historico = $res_hist ? $res_hist->fetch_all(MYSQLI_ASSOC) : [];
                     </select>
                 </div>
             </div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-primary rounded-3 px-4">Mover Campista</button>
+            <div class="modal-footer bg-light border-top">
+                <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-gold rounded-3 px-4">Mover Campista</button>
             </div>
         </form>
     </div>

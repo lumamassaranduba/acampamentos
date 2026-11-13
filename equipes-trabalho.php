@@ -639,7 +639,7 @@ $voluntarios_geral = $stmt_geral->get_result()->fetch_all(MYSQLI_ASSOC);
                 <div class="col-12 text-center py-5 text-muted card-custom">
                     <i class="bi bi-diagram-3 fs-1 text-muted opacity-50 d-block mb-2"></i>
                     <h5 class="fw-bold">Nenhuma equipe cadastrada.</h5>
-                    <p class="small mb-0">Clique em <strong>"+ Criar Nova Equipe"</strong> para cadastrar um setor (Ex: Cozinha, Secretaria, Apoio...).</p>
+                    <p class="small mb-0">Clique em <strong>"+ Criar Nova Equipe"</strong> para cadastrar uma equipe (Ex: Cozinha, Secretaria, Apoio...).</p>
                 </div>
             <?php else: ?>
                 <?php foreach ($equipes as $eq): ?>
